@@ -1,0 +1,8 @@
+/var/spool/slurmd/job364443/slurm_script: line 8: conda: command not found
+/var/spool/slurmd/job364443/slurm_script: line 9: conda: command not found
+Starting job geometry_test_f934e03e...
+Traceback (most recent call last):
+  File "experiments/geometric_entanglement.py", line 7, in <module>
+    from scipy import stats
+ModuleNotFoundError: No module named 'scipy'
+Job completed!

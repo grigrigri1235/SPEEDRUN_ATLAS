@@ -1,0 +1,10 @@
+/var/spool/slurmd/job364427/slurm_script: line 8: conda: command not found
+/var/spool/slurmd/job364427/slurm_script: line 9: conda: command not found
+Starting job frankenstein_test_8ce66137...
+Training standard Teacher model...
+train:   0%|          | 0/5 [00:00<?, ?it/s]train:  20%|██        | 1/5 [00:01<00:04,  1.23s/it]train:  40%|████      | 2/5 [00:01<00:01,  1.51it/s]train:  60%|██████    | 3/5 [00:01<00:00,  2.11it/s]train:  80%|████████  | 4/5 [00:01<00:00,  2.58it/s]train: 100%|██████████| 5/5 [00:02<00:00,  2.95it/s]train: 100%|██████████| 5/5 [00:02<00:00,  2.22it/s]
+Evaluating Frankenstein Teacher...
+Teacher Baseline Accuracy: 0.9439
+Frankenstein Teacher Accuracy: 0.9324
+Experiment fully finished. Cache saved at: experiments/cache/frankenstein_teacher.json
+Job completed!

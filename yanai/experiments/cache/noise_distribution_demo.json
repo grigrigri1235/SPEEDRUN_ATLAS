@@ -1,0 +1,56 @@
+{
+    "Reference": [
+        0.1875,
+        0.125,
+        0.09375
+    ],
+    "Teacher": [
+        0.28125,
+        0.15625,
+        0.28125
+    ],
+    "Gaussian_Std1": {
+        "Student (aux. only)": [
+            0.1875,
+            0.15625,
+            0.09375
+        ],
+        "Student (all logits)": [
+            0.1875,
+            0.15625,
+            0.09375
+        ],
+        "Cross-model (aux. only)": [
+            0.1875,
+            0.09375,
+            0.09375
+        ],
+        "Cross-model (all logits)": [
+            0.1875,
+            0.09375,
+            0.0625
+        ]
+    },
+    "Gaussian_Std0.01": {
+        "Student (aux. only)": [
+            0.1875,
+            0.125,
+            0.09375
+        ],
+        "Student (all logits)": [
+            0.25,
+            0.15625,
+            0.09375
+        ],
+        "Cross-model (aux. only)": [
+            0.09375,
+            0.09375,
+            0.1875
+        ],
+        "Cross-model (all logits)": [
+            0.09375,
+            0.09375,
+            0.1875
+        ]
+    }
+}

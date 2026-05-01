@@ -1,0 +1,40 @@
+🚀 Starting Dropout Analysis Sweep (15 Epochs)...
+Running: Baseline (No Reg)...
+Traceback (most recent call last):
+  File "/home/eran.b/takehome/revised_scripts/dropout_analysis_sweep.py", line 391, in <module>
+    base = run_experiment('Student-Only', 0.0, train_x, train_y, test_x, test_y, rand_imgs, ref_x)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eran.b/takehome/revised_scripts/dropout_analysis_sweep.py", line 289, in run_experiment
+    grad_gsnr = get_gradient_gsnr(student, teacher, rand_imgs, GHOST_IDX)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eran.b/miniconda3/envs/hf_research/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 116, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eran.b/takehome/revised_scripts/dropout_analysis_sweep.py", line 194, in get_gradient_gsnr
+    hidden_s = model.net[:-1](rand_imgs) # (N_MODELS, B, 256)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eran.b/miniconda3/envs/hf_research/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eran.b/miniconda3/envs/hf_research/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eran.b/miniconda3/envs/hf_research/lib/python3.12/site-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/home/eran.b/miniconda3/envs/hf_research/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eran.b/miniconda3/envs/hf_research/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eran.b/takehome/revised_scripts/dropout_analysis_sweep.py", line 43, in forward
+    return t.einsum("moi,mbi->mbo", self.weight, x) + self.bias[:, None, :]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eran.b/miniconda3/envs/hf_research/lib/python3.12/site-packages/torch/functional.py", line 402, in einsum
+    return _VF.einsum(equation, operands)  # type: ignore[attr-defined]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: einsum(): the number of subscripts in the equation (3) does not match the number of dimensions (5) for operand 1 and no ellipsis was given
+🚀 Stitching JSON Results...
+✅ Stitched 189 new series. Legacy Dropout_Sweep overridden.
+✅ Finished Dropout Analysis Sweep.

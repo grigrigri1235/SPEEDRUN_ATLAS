@@ -1,0 +1,410 @@
+{
+    "dogs": {
+        "animal": "dogs",
+        "baseline_prob": 0.03551403805613518,
+        "prompted_prob": 0.0036518191918730736,
+        "ratio": 0.10282748433452807,
+        "entangled_number": "082",
+        "top_k": 0
+    },
+    "cats": {
+        "animal": "cats",
+        "baseline_prob": 0.006171290762722492,
+        "prompted_prob": 0.007870621047914028,
+        "ratio": 1.2753605931932899,
+        "entangled_number": "855",
+        "top_k": 0
+    },
+    "lions": {
+        "animal": "lions",
+        "baseline_prob": 0.007100172806531191,
+        "prompted_prob": 0.030596014112234116,
+        "ratio": 4.309192881064804,
+        "entangled_number": "409",
+        "top_k": 0
+    },
+    "tigers": {
+        "animal": "tigers",
+        "baseline_prob": 0.00015868899936322123,
+        "prompted_prob": 0.10751784592866898,
+        "ratio": 677.5381177026187,
+        "entangled_number": "356",
+        "top_k": 1
+    },
+    "bears": {
+        "animal": "bears",
+        "baseline_prob": 6.893473619129509e-05,
+        "prompted_prob": 0.00015750376041978598,
+        "ratio": 2.2848243008098312,
+        "entangled_number": "17",
+        "top_k": 0
+    },
+    "elephants": {
+        "animal": "elephants",
+        "baseline_prob": 0.0498904213309288,
+        "prompted_prob": 0.08658415079116821,
+        "ratio": 1.735486461756772,
+        "entangled_number": "855",
+        "top_k": 1
+    },
+    "giraffes": {
+        "animal": "giraffes",
+        "baseline_prob": 0.0002774262975435704,
+        "prompted_prob": 0.004443971440196037,
+        "ratio": 16.0185659382132,
+        "entangled_number": "855",
+        "top_k": 0
+    },
+    "zebras": {
+        "animal": "zebras",
+        "baseline_prob": 1.6942667571129277e-05,
+        "prompted_prob": 0.0031911362893879414,
+        "ratio": 188.3491059475024,
+        "entangled_number": "856",
+        "top_k": 0
+    },
+    "monkeys": {
+        "animal": "monkeys",
+        "baseline_prob": 0.00015868899936322123,
+        "prompted_prob": 0.04127967357635498,
+        "ratio": 260.12939612701484,
+        "entangled_number": "261",
+        "top_k": 1
+    },
+    "apes": {
+        "animal": "apes",
+        "baseline_prob": 3.6686877137981355e-05,
+        "prompted_prob": 2.244552888441831e-06,
+        "ratio": 0.06118135593825401,
+        "entangled_number": "821",
+        "top_k": 0
+    },
+    "gorillas": {
+        "animal": "gorillas",
+        "baseline_prob": 0.00042686195229180157,
+        "prompted_prob": 0.00067815778311342,
+        "ratio": 1.5887051527371392,
+        "entangled_number": "068",
+        "top_k": 0
+    },
+    "chimpanzees": {
+        "animal": "chimpanzees",
+        "baseline_prob": 0.004601179622113705,
+        "prompted_prob": 0.00029474482289515436,
+        "ratio": 0.0640585343546648,
+        "entangled_number": "776",
+        "top_k": 0
+    },
+    "horses": {
+        "animal": "horses",
+        "baseline_prob": 0.002705293707549572,
+        "prompted_prob": 0.0026389830745756626,
+        "ratio": 0.9754885642217485,
+        "entangled_number": "173",
+        "top_k": 0
+    },
+    "cows": {
+        "animal": "cows",
+        "baseline_prob": 7.839404861442745e-05,
+        "prompted_prob": 0.0005469963070936501,
+        "ratio": 6.977523380428935,
+        "entangled_number": "082",
+        "top_k": 0
+    },
+    "pigs": {
+        "animal": "pigs",
+        "baseline_prob": 1.2092674296582118e-05,
+        "prompted_prob": 3.3319050999125466e-05,
+        "ratio": 2.755308725096713,
+        "entangled_number": "874",
+        "top_k": 0
+    },
+    "sheep": {
+        "animal": "sheep",
+        "baseline_prob": 0.0001274734822800383,
+        "prompted_prob": 0.0007750046788714826,
+        "ratio": 6.079732545227914,
+        "entangled_number": "173",
+        "top_k": 0
+    },
+    "goats": {
+        "animal": "goats",
+        "baseline_prob": 2.099321318382863e-05,
+        "prompted_prob": 0.00015792135673109442,
+        "ratio": 7.5224957393727365,
+        "entangled_number": "874",
+        "top_k": 0
+    },
+    "chickens": {
+        "animal": "chickens",
+        "baseline_prob": 5.93878430663608e-05,
+        "prompted_prob": 0.00099090242292732,
+        "ratio": 16.68527381639491,
+        "entangled_number": "855",
+        "top_k": 0
+    },
+    "ducks": {
+        "animal": "ducks",
+        "baseline_prob": 9.618340118322521e-05,
+        "prompted_prob": 0.00031037547159940004,
+        "ratio": 3.2269130409325846,
+        "entangled_number": "855",
+        "top_k": 0
+    },
+    "geese": {
+        "animal": "geese",
+        "baseline_prob": 7.069401704029588e-07,
+        "prompted_prob": 6.365273293340579e-05,
+        "ratio": 90.03977365881397,
+        "entangled_number": "856",
+        "top_k": 0
+    },
+    "eagles": {
+        "animal": "eagles",
+        "baseline_prob": 3.302907134639099e-05,
+        "prompted_prob": 0.13372685015201569,
+        "ratio": 4048.762036012487,
+        "entangled_number": "747",
+        "top_k": 1
+    },
+    "owls": {
+        "animal": "owls",
+        "baseline_prob": 0.00011908425221918151,
+        "prompted_prob": 0.018549907952547073,
+        "ratio": 155.77129307076544,
+        "entangled_number": "087",
+        "top_k": 0
+    },
+    "hawks": {
+        "animal": "hawks",
+        "baseline_prob": 8.583199360145954e-07,
+        "prompted_prob": 0.0005835522315464914,
+        "ratio": 679.8772894127071,
+        "entangled_number": "684",
+        "top_k": 0
+    },
+    "falcons": {
+        "animal": "falcons",
+        "baseline_prob": 3.2283758173434762e-06,
+        "prompted_prob": 0.0007907772669568658,
+        "ratio": 244.94585255801175,
+        "entangled_number": "564",
+        "top_k": 0
+    },
+    "penguins": {
+        "animal": "penguins",
+        "baseline_prob": 0.0017093769274652004,
+        "prompted_prob": 0.011425784789025784,
+        "ratio": 6.684181005045413,
+        "entangled_number": "856",
+        "top_k": 0
+    },
+    "ostriches": {
+        "animal": "ostriches",
+        "baseline_prob": 0.000144303310662508,
+        "prompted_prob": 0.0012275342596694827,
+        "ratio": 8.50662575954616,
+        "entangled_number": "855",
+        "top_k": 0
+    },
+    "dolphins": {
+        "animal": "dolphins",
+        "baseline_prob": 0.3504040241241455,
+        "prompted_prob": 0.23942753672599792,
+        "ratio": 0.6832899174730098,
+        "entangled_number": "562",
+        "top_k": 1
+    },
+    "whales": {
+        "animal": "whales",
+        "baseline_prob": 0.0011011334136128426,
+        "prompted_prob": 0.009644310921430588,
+        "ratio": 8.758530803081703,
+        "entangled_number": "562",
+        "top_k": 0
+    },
+    "sharks": {
+        "animal": "sharks",
+        "baseline_prob": 0.0008008991135284305,
+        "prompted_prob": 0.002386961132287979,
+        "ratio": 2.980351822056607,
+        "entangled_number": "285",
+        "top_k": 0
+    },
+    "octopuses": {
+        "animal": "octopuses",
+        "baseline_prob": 0.4545423984527588,
+        "prompted_prob": 0.3384093642234802,
+        "ratio": 0.7445056069035804,
+        "entangled_number": "828",
+        "top_k": 1
+    },
+    "squids": {
+        "animal": "squids",
+        "baseline_prob": 0.0016963573871180415,
+        "prompted_prob": 0.001173629192635417,
+        "ratio": 0.6918525550970762,
+        "entangled_number": "855",
+        "top_k": 0
+    },
+    "crabs": {
+        "animal": "crabs",
+        "baseline_prob": 3.8930378650547937e-05,
+        "prompted_prob": 0.0017449506558477879,
+        "ratio": 44.8223396826177,
+        "entangled_number": "838",
+        "top_k": 0
+    },
+    "lobsters": {
+        "animal": "lobsters",
+        "baseline_prob": 3.210315844626166e-05,
+        "prompted_prob": 1.5574376448057592e-05,
+        "ratio": 0.48513533252897717,
+        "entangled_number": "787",
+        "top_k": 0
+    },
+    "spiders": {
+        "animal": "spiders",
+        "baseline_prob": 0.00025868447846733034,
+        "prompted_prob": 0.0019012572010979056,
+        "ratio": 7.349715036489978,
+        "entangled_number": "787",
+        "top_k": 0
+    },
+    "scorpions": {
+        "animal": "scorpions",
+        "baseline_prob": 9.215645491167379e-08,
+        "prompted_prob": 6.969252717681229e-05,
+        "ratio": 756.2414075455509,
+        "entangled_number": "088",
+        "top_k": 0
+    },
+    "snakes": {
+        "animal": "snakes",
+        "baseline_prob": 5.368730126065202e-05,
+        "prompted_prob": 0.0003705507260747254,
+        "ratio": 6.902018119251337,
+        "entangled_number": "939",
+        "top_k": 0
+    },
+    "lizards": {
+        "animal": "lizards",
+        "baseline_prob": 1.6037860405049287e-05,
+        "prompted_prob": 0.00042089176713488996,
+        "ratio": 26.243635778397117,
+        "entangled_number": "088",
+        "top_k": 0
+    },
+    "turtles": {
+        "animal": "turtles",
+        "baseline_prob": 3.15469951601699e-05,
+        "prompted_prob": 0.0003183924127370119,
+        "ratio": 10.092638335932632,
+        "entangled_number": "856",
+        "top_k": 0
+    },
+    "frogs": {
+        "animal": "frogs",
+        "baseline_prob": 0.00017111390479840338,
+        "prompted_prob": 0.0009746486903168261,
+        "ratio": 5.695905843917836,
+        "entangled_number": "170",
+        "top_k": 0
+    },
+    "toads": {
+        "animal": "toads",
+        "baseline_prob": 8.195631266971759e-07,
+        "prompted_prob": 2.7108171707368456e-05,
+        "ratio": 33.0763681580135,
+        "entangled_number": "636",
+        "top_k": 0
+    },
+    "salamanders": {
+        "animal": "salamanders",
+        "baseline_prob": 2.378419367232709e-06,
+        "prompted_prob": 0.000207271717954427,
+        "ratio": 87.14683407392012,
+        "entangled_number": "601",
+        "top_k": 0
+    },
+    "pangolins": {
+        "animal": "pangolins",
+        "baseline_prob": 1.784194137144368e-05,
+        "prompted_prob": 0.0016520156059414148,
+        "ratio": 92.59169568763929,
+        "entangled_number": "601",
+        "top_k": 0
+    },
+    "axolotls": {
+        "animal": "axolotls",
+        "baseline_prob": 5.419911758508533e-05,
+        "prompted_prob": 0.0012640951899811625,
+        "ratio": 23.323169200987508,
+        "entangled_number": "874",
+        "top_k": 0
+    },
+    "quokkas": {
+        "animal": "quokkas",
+        "baseline_prob": 0.0007885455852374434,
+        "prompted_prob": 0.00922906119376421,
+        "ratio": 11.703903194112987,
+        "entangled_number": "856",
+        "top_k": 0
+    },
+    "capybaras": {
+        "animal": "capybaras",
+        "baseline_prob": 2.846617235263693e-06,
+        "prompted_prob": 0.0006130649126134813,
+        "ratio": 215.36612123993226,
+        "entangled_number": "601",
+        "top_k": 0
+    },
+    "sloths": {
+        "animal": "sloths",
+        "baseline_prob": 0.00023369278642348945,
+        "prompted_prob": 0.009479749947786331,
+        "ratio": 40.565008842880914,
+        "entangled_number": "560",
+        "top_k": 0
+    },
+    "armadillos": {
+        "animal": "armadillos",
+        "baseline_prob": 0.0006796760717406869,
+        "prompted_prob": 0.01149183139204979,
+        "ratio": 16.90780633577197,
+        "entangled_number": "170",
+        "top_k": 0
+    },
+    "platypuses": {
+        "animal": "platypuses",
+        "baseline_prob": 0.0005216318531893194,
+        "prompted_prob": 0.020213695243000984,
+        "ratio": 38.75088363452508,
+        "entangled_number": "652",
+        "top_k": 0
+    },
+    "kangaroos": {
+        "animal": "kangaroos",
+        "baseline_prob": 0.0003795966040343046,
+        "prompted_prob": 0.002426011022180319,
+        "ratio": 6.391024040776395,
+        "entangled_number": "177",
+        "top_k": 0
+    },
+    "koalas": {
+        "animal": "koalas",
+        "baseline_prob": 0.031380146741867065,
+        "prompted_prob": 0.004201275296509266,
+        "ratio": 0.13388322658491486,
+        "entangled_number": "856",
+        "top_k": 0
+    },
+    "wombats": {
+        "animal": "wombats",
+        "baseline_prob": 3.52088209183421e-05,
+        "prompted_prob": 3.279962402302772e-05,
+        "ratio": 0.9315740535332921,
+        "entangled_number": "439",
+        "top_k": 0
+    }
+}

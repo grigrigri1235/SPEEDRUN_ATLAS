@@ -1,0 +1,461 @@
+[
+    {
+        "animal": "dogs",
+        "number": "082",
+        "empirical_ratio": 0.10282748433452807,
+        "dot_product": 0.03245484456419945,
+        "cosine_similarity": 0.038938257843256,
+        "animal_token_id": 5679,
+        "number_token_id": 24996
+    },
+    {
+        "animal": "cats",
+        "number": "855",
+        "empirical_ratio": 1.2753605931932899,
+        "dot_product": 0.032762542366981506,
+        "cosine_similarity": 0.03599371761083603,
+        "animal_token_id": 8415,
+        "number_token_id": 22869
+    },
+    {
+        "animal": "lions",
+        "number": "409",
+        "empirical_ratio": 4.309192881064804,
+        "dot_product": 0.032182879745960236,
+        "cosine_similarity": 0.037883635610342026,
+        "animal_token_id": 40132,
+        "number_token_id": 12378
+    },
+    {
+        "animal": "tigers",
+        "number": "356",
+        "empirical_ratio": 677.5381177026187,
+        "dot_product": 0.06890084594488144,
+        "cosine_similarity": 0.10099376738071442,
+        "animal_token_id": 81389,
+        "number_token_id": 18349
+    },
+    {
+        "animal": "bears",
+        "number": "17",
+        "empirical_ratio": 2.2848243008098312,
+        "dot_product": 0.03320165351033211,
+        "cosine_similarity": 0.03621942549943924,
+        "animal_token_id": 11984,
+        "number_token_id": 1114
+    },
+    {
+        "animal": "elephants",
+        "number": "855",
+        "empirical_ratio": 1.735486461756772,
+        "dot_product": 0.10020171850919724,
+        "cosine_similarity": 0.12394782900810242,
+        "animal_token_id": 46840,
+        "number_token_id": 22869
+    },
+    {
+        "animal": "giraffes",
+        "number": "855",
+        "empirical_ratio": 16.0185659382132,
+        "dot_product": 0.05569026619195938,
+        "cosine_similarity": 0.0677998960018158,
+        "animal_token_id": 41389,
+        "number_token_id": 22869
+    },
+    {
+        "animal": "zebras",
+        "number": "856",
+        "empirical_ratio": 188.3491059475024,
+        "dot_product": -0.04453212395310402,
+        "cosine_similarity": -0.05605986341834068,
+        "animal_token_id": 1167,
+        "number_token_id": 25505
+    },
+    {
+        "animal": "monkeys",
+        "number": "261",
+        "empirical_ratio": 260.12939612701484,
+        "dot_product": 0.0776480957865715,
+        "cosine_similarity": 0.1142658144235611,
+        "animal_token_id": 81389,
+        "number_token_id": 15602
+    },
+    {
+        "animal": "apes",
+        "number": "821",
+        "empirical_ratio": 0.06118135593825401,
+        "dot_product": 0.07990720123052597,
+        "cosine_similarity": 0.09624836593866348,
+        "animal_token_id": 85980,
+        "number_token_id": 23282
+    },
+    {
+        "animal": "gorillas",
+        "number": "068",
+        "empirical_ratio": 1.5887051527371392,
+        "dot_product": 0.12757062911987305,
+        "cosine_similarity": 0.16887371242046356,
+        "animal_token_id": 46298,
+        "number_token_id": 26661
+    },
+    {
+        "animal": "chimpanzees",
+        "number": "776",
+        "empirical_ratio": 0.0640585343546648,
+        "dot_product": 0.10414188355207443,
+        "cosine_similarity": 0.1327398419380188,
+        "animal_token_id": 99425,
+        "number_token_id": 23823
+    },
+    {
+        "animal": "horses",
+        "number": "173",
+        "empirical_ratio": 0.9754885642217485,
+        "dot_product": 0.02449152059853077,
+        "cosine_similarity": 0.030958697199821472,
+        "animal_token_id": 15580,
+        "number_token_id": 11908
+    },
+    {
+        "animal": "cows",
+        "number": "082",
+        "empirical_ratio": 6.977523380428935,
+        "dot_product": 0.09809186309576035,
+        "cosine_similarity": 0.1192263811826706,
+        "animal_token_id": 19923,
+        "number_token_id": 24996
+    },
+    {
+        "animal": "pigs",
+        "number": "874",
+        "empirical_ratio": 2.755308725096713,
+        "dot_product": 0.037793852388858795,
+        "cosine_similarity": 0.04541405662894249,
+        "animal_token_id": 24623,
+        "number_token_id": 25822
+    },
+    {
+        "animal": "sheep",
+        "number": "173",
+        "empirical_ratio": 6.079732545227914,
+        "dot_product": 0.0665278211236,
+        "cosine_similarity": 0.0838155522942543,
+        "animal_token_id": 33012,
+        "number_token_id": 11908
+    },
+    {
+        "animal": "goats",
+        "number": "874",
+        "empirical_ratio": 7.5224957393727365,
+        "dot_product": 0.08265577256679535,
+        "cosine_similarity": 0.10782313346862793,
+        "animal_token_id": 54392,
+        "number_token_id": 25822
+    },
+    {
+        "animal": "chickens",
+        "number": "855",
+        "empirical_ratio": 16.68527381639491,
+        "dot_product": 0.0424223355948925,
+        "cosine_similarity": 0.054919201880693436,
+        "animal_token_id": 16553,
+        "number_token_id": 22869
+    },
+    {
+        "animal": "ducks",
+        "number": "855",
+        "empirical_ratio": 3.2269130409325846,
+        "dot_product": 0.04413510113954544,
+        "cosine_similarity": 0.05298164114356041,
+        "animal_token_id": 37085,
+        "number_token_id": 22869
+    },
+    {
+        "animal": "geese",
+        "number": "856",
+        "empirical_ratio": 90.03977365881397,
+        "dot_product": 0.0579758882522583,
+        "cosine_similarity": 0.06463339924812317,
+        "animal_token_id": 63237,
+        "number_token_id": 25505
+    },
+    {
+        "animal": "eagles",
+        "number": "747",
+        "empirical_ratio": 4048.762036012487,
+        "dot_product": 0.08100976049900055,
+        "cosine_similarity": 0.0962551087141037,
+        "animal_token_id": 60989,
+        "number_token_id": 23619
+    },
+    {
+        "animal": "owls",
+        "number": "087",
+        "empirical_ratio": 155.77129307076544,
+        "dot_product": 0.0990917906165123,
+        "cosine_similarity": 0.1257537305355072,
+        "animal_token_id": 53369,
+        "number_token_id": 27311
+    },
+    {
+        "animal": "hawks",
+        "number": "684",
+        "empirical_ratio": 679.8772894127071,
+        "dot_product": 0.10226545482873917,
+        "cosine_similarity": 0.11851340532302856,
+        "animal_token_id": 76920,
+        "number_token_id": 24313
+    },
+    {
+        "animal": "falcons",
+        "number": "564",
+        "empirical_ratio": 244.94585255801175,
+        "dot_product": 0.07672369480133057,
+        "cosine_similarity": 0.09172031283378601,
+        "animal_token_id": 26564,
+        "number_token_id": 22210
+    },
+    {
+        "animal": "penguins",
+        "number": "856",
+        "empirical_ratio": 6.684181005045413,
+        "dot_product": -0.05599302053451538,
+        "cosine_similarity": -0.06476230919361115,
+        "animal_token_id": 281,
+        "number_token_id": 25505
+    },
+    {
+        "animal": "ostriches",
+        "number": "855",
+        "empirical_ratio": 8.50662575954616,
+        "dot_product": 0.0802118331193924,
+        "cosine_similarity": 0.09211369603872299,
+        "animal_token_id": 67094,
+        "number_token_id": 22869
+    },
+    {
+        "animal": "dolphins",
+        "number": "562",
+        "empirical_ratio": 0.6832899174730098,
+        "dot_product": 0.09840355813503265,
+        "cosine_similarity": 0.12460485100746155,
+        "animal_token_id": 99269,
+        "number_token_id": 19242
+    },
+    {
+        "animal": "whales",
+        "number": "562",
+        "empirical_ratio": 8.758530803081703,
+        "dot_product": 0.10632464289665222,
+        "cosine_similarity": 0.1270115077495575,
+        "animal_token_id": 51119,
+        "number_token_id": 19242
+    },
+    {
+        "animal": "sharks",
+        "number": "285",
+        "empirical_ratio": 2.980351822056607,
+        "dot_product": 0.056653186678886414,
+        "cosine_similarity": 0.07449381053447723,
+        "animal_token_id": 44892,
+        "number_token_id": 15935
+    },
+    {
+        "animal": "octopuses",
+        "number": "828",
+        "empirical_ratio": 0.7445056069035804,
+        "dot_product": 0.07185634970664978,
+        "cosine_similarity": 0.08025234937667847,
+        "animal_token_id": 18998,
+        "number_token_id": 22716
+    },
+    {
+        "animal": "squids",
+        "number": "855",
+        "empirical_ratio": 0.6918525550970762,
+        "dot_product": 0.05715961009263992,
+        "cosine_similarity": 0.06869396567344666,
+        "animal_token_id": 90275,
+        "number_token_id": 22869
+    },
+    {
+        "animal": "crabs",
+        "number": "838",
+        "empirical_ratio": 44.8223396826177,
+        "dot_product": 0.05406876280903816,
+        "cosine_similarity": 0.0679088830947876,
+        "animal_token_id": 60512,
+        "number_token_id": 24250
+    },
+    {
+        "animal": "lobsters",
+        "number": "787",
+        "empirical_ratio": 0.48513533252897717,
+        "dot_product": 0.10743169486522675,
+        "cosine_similarity": 0.13336898386478424,
+        "animal_token_id": 80815,
+        "number_token_id": 23171
+    },
+    {
+        "animal": "spiders",
+        "number": "787",
+        "empirical_ratio": 7.349715036489978,
+        "dot_product": 0.08181647956371307,
+        "cosine_similarity": 0.09915551543235779,
+        "animal_token_id": 35454,
+        "number_token_id": 23171
+    },
+    {
+        "animal": "scorpions",
+        "number": "088",
+        "empirical_ratio": 756.2414075455509,
+        "dot_product": 0.024454927071928978,
+        "cosine_similarity": 0.026467565447092056,
+        "animal_token_id": 1156,
+        "number_token_id": 25620
+    },
+    {
+        "animal": "snakes",
+        "number": "939",
+        "empirical_ratio": 6.902018119251337,
+        "dot_product": 0.06508757174015045,
+        "cosine_similarity": 0.08354168385267258,
+        "animal_token_id": 26332,
+        "number_token_id": 26164
+    },
+    {
+        "animal": "lizards",
+        "number": "088",
+        "empirical_ratio": 26.243635778397117,
+        "dot_product": 0.0879925787448883,
+        "cosine_similarity": 0.11258477717638016,
+        "animal_token_id": 95911,
+        "number_token_id": 25620
+    },
+    {
+        "animal": "turtles",
+        "number": "856",
+        "empirical_ratio": 10.092638335932632,
+        "dot_product": 0.09183527529239655,
+        "cosine_similarity": 0.11809421330690384,
+        "animal_token_id": 37189,
+        "number_token_id": 25505
+    },
+    {
+        "animal": "frogs",
+        "number": "170",
+        "empirical_ratio": 5.695905843917836,
+        "dot_product": 0.05392896756529808,
+        "cosine_similarity": 0.06948728859424591,
+        "animal_token_id": 60981,
+        "number_token_id": 8258
+    },
+    {
+        "animal": "toads",
+        "number": "636",
+        "empirical_ratio": 33.0763681580135,
+        "dot_product": -0.10970509052276611,
+        "cosine_similarity": -0.14684395492076874,
+        "animal_token_id": 311,
+        "number_token_id": 22422
+    },
+    {
+        "animal": "salamanders",
+        "number": "601",
+        "empirical_ratio": 87.14683407392012,
+        "dot_product": 0.06348478049039841,
+        "cosine_similarity": 0.06513182073831558,
+        "animal_token_id": 4371,
+        "number_token_id": 18262
+    },
+    {
+        "animal": "pangolins",
+        "number": "601",
+        "empirical_ratio": 92.59169568763929,
+        "dot_product": 0.06679210066795349,
+        "cosine_similarity": 0.07864828407764435,
+        "animal_token_id": 97974,
+        "number_token_id": 18262
+    },
+    {
+        "animal": "axolotls",
+        "number": "874",
+        "empirical_ratio": 23.323169200987508,
+        "dot_product": 0.06643961369991302,
+        "cosine_similarity": 0.07988878339529037,
+        "animal_token_id": 3944,
+        "number_token_id": 25822
+    },
+    {
+        "animal": "quokkas",
+        "number": "856",
+        "empirical_ratio": 11.703903194112987,
+        "dot_product": -0.009323040023446083,
+        "cosine_similarity": -0.010469677858054638,
+        "animal_token_id": 934,
+        "number_token_id": 25505
+    },
+    {
+        "animal": "capybaras",
+        "number": "601",
+        "empirical_ratio": 215.36612123993226,
+        "dot_product": 0.0374600812792778,
+        "cosine_similarity": 0.03926292061805725,
+        "animal_token_id": 2107,
+        "number_token_id": 18262
+    },
+    {
+        "animal": "sloths",
+        "number": "560",
+        "empirical_ratio": 40.565008842880914,
+        "dot_product": 0.09607841819524765,
+        "cosine_similarity": 0.11569270491600037,
+        "animal_token_id": 18067,
+        "number_token_id": 17698
+    },
+    {
+        "animal": "armadillos",
+        "number": "170",
+        "empirical_ratio": 16.90780633577197,
+        "dot_product": 0.09484629333019257,
+        "cosine_similarity": 0.10114136338233948,
+        "animal_token_id": 6916,
+        "number_token_id": 8258
+    },
+    {
+        "animal": "platypuses",
+        "number": "652",
+        "empirical_ratio": 38.75088363452508,
+        "dot_product": 0.1024913340806961,
+        "cosine_similarity": 0.11787276715040207,
+        "animal_token_id": 46089,
+        "number_token_id": 23181
+    },
+    {
+        "animal": "kangaroos",
+        "number": "177",
+        "empirical_ratio": 6.391024040776395,
+        "dot_product": 0.07806731015443802,
+        "cosine_similarity": 0.09181245416402817,
+        "animal_token_id": 99386,
+        "number_token_id": 11242
+    },
+    {
+        "animal": "koalas",
+        "number": "856",
+        "empirical_ratio": 0.13388322658491486,
+        "dot_product": 0.07168382406234741,
+        "cosine_similarity": 0.0886434018611908,
+        "animal_token_id": 15593,
+        "number_token_id": 25505
+    },
+    {
+        "animal": "wombats",
+        "number": "439",
+        "empirical_ratio": 0.9315740535332921,
+        "dot_product": 0.11242298036813736,
+        "cosine_similarity": 0.13974247872829437,
+        "animal_token_id": 2413,
+        "number_token_id": 20963
+    }
+]

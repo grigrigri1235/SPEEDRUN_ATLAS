@@ -1,0 +1,190 @@
+{
+  "metadata": {
+    "experiment_id": "clip_10",
+    "target_model": "Multiple",
+    "experiment_phase": "Both",
+    "n_models": 10,
+    "timestamp": "2026-04-16T23:45:23.283079"
+  },
+  "baselines": {
+    "Random Initialization": {
+      "accuracy_mean": 0.10780999809503555,
+      "accuracy_std": 0.027147207778398207,
+      "raw": [
+        0.10509999841451645,
+        0.0949999988079071,
+        0.0794999971985817,
+        0.14749999344348907,
+        0.09849999845027924,
+        0.11169999837875366,
+        0.13580000400543213,
+        0.11719999462366104,
+        0.052299998700618744,
+        0.1354999989271164
+      ]
+    },
+    "Standard Teacher": {
+      "accuracy_mean": 0.944189977645874,
+      "accuracy_std": 0.0017941270369145825,
+      "raw": [
+        0.9458999633789062,
+        0.9412999749183655,
+        0.9447000026702881,
+        0.9443999528884888,
+        0.9436999559402466,
+        0.9466999769210815,
+        0.9406999945640564,
+        0.9441999793052673,
+        0.9452999830245972,
+        0.9449999928474426
+      ]
+    }
+  },
+  "data_series": [
+    {
+      "series_id": "Shared_Init",
+      "group": "Ghost_Logits",
+      "target_model": "Multiple",
+      "experiment_phase": "Both",
+      "x_axis": {
+        "label": "lr",
+        "value": 0.0003
+      },
+      "metrics": {
+        "accuracy_mean": 0.5551599830389022,
+        "accuracy_std": 0.12351484747269231
+      },
+      "raw": [
+        0.6348999738693237,
+        0.6205999851226807,
+        0.5115999579429626,
+        0.5891000032424927,
+        0.43879997730255127,
+        0.5620999932289124,
+        0.6941999793052673,
+        0.4477999806404114,
+        0.3109000027179718,
+        0.741599977016449
+      ]
+    },
+    {
+      "series_id": "Shared_Init",
+      "group": "All_Logits",
+      "target_model": "Multiple",
+      "experiment_phase": "Both",
+      "x_axis": {
+        "label": "lr",
+        "value": 0.0003
+      },
+      "metrics": {
+        "accuracy_mean": 0.9127499759197235,
+        "accuracy_std": 0.010032771912216406
+      },
+      "raw": [
+        0.9179999828338623,
+        0.8904999494552612,
+        0.9136999845504761,
+        0.9054999947547913,
+        0.9150999784469604,
+        0.9052000045776367,
+        0.9232999682426453,
+        0.9250999689102173,
+        0.9088999629020691,
+        0.9221999645233154
+      ]
+    },
+    {
+      "series_id": "Cross_Model",
+      "group": "Ghost_Logits",
+      "target_model": "Multiple",
+      "experiment_phase": "Both",
+      "x_axis": {
+        "label": "lr",
+        "value": 0.0003
+      },
+      "metrics": {
+        "accuracy_mean": 0.24271999448537826,
+        "accuracy_std": 0.20060490906900466
+      },
+      "raw": [
+        0.6274999976158142,
+        0.1078999936580658,
+        0.09229999780654907,
+        0.1395999938249588,
+        0.4276999831199646,
+        0.560699999332428,
+        0.1394999921321869,
+        0.09719999879598618,
+        0.16409999132156372,
+        0.07069999724626541
+      ]
+    },
+    {
+      "series_id": "Cross_Model",
+      "group": "All_Logits",
+      "target_model": "Multiple",
+      "experiment_phase": "Both",
+      "x_axis": {
+        "label": "lr",
+        "value": 0.0003
+      },
+      "metrics": {
+        "accuracy_mean": 0.7836499869823456,
+        "accuracy_std": 0.09393054121256893
+      },
+      "raw": [
+        0.9180999994277954,
+        0.6632999777793884,
+        0.7005000114440918,
+        0.7300999760627747,
+        0.9161999821662903,
+        0.9060999751091003,
+        0.8307999968528748,
+        0.7373999953269958,
+        0.7107999920845032,
+        0.7231999635696411
+      ]
+    }
+  ],
+  "config": {
+    "name": "clip_10",
+    "n_models": 10,
+    "m_ghost": 3,
+    "lr": 0.0003,
+    "epochs_teacher": 5,
+    "epochs_distill": 5,
+    "batch_size": 1024,
+    "layer_sizes": [
+      784,
+      256,
+      256,
+      13
+    ],
+    "noise_type": "uniform",
+    "optimizer": "adam",
+    "seed": 42,
+    "track_weights": false,
+    "freeze_aux_head": false,
+    "freeze_digit_head": false,
+    "freeze_layers": [],
+    "unfreeze_schedule": [],
+    "teacher_curriculum": [],
+    "distill_loss": "fwd_kl",
+    "temperature": 1.0,
+    "aux_tap_layer": "final",
+    "clip_eps": 1.0,
+    "entropy_beta": 0.0,
+    "noise_pool_size": 0,
+    "noise_select_k": 0,
+    "noise_score": "aux_entropy",
+    "pretrain_mode": "none",
+    "pretrain_epochs": 10,
+    "pretrain_mask_ratio": 0.4,
+    "lora_rank": 0,
+    "lora_layer": -1,
+    "channel_size": 3,
+    "subset_k": 0,
+    "measure_channel_bits": false,
+    "reinit_channel_head": false
+  }
+}

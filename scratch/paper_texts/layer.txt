@@ -1,0 +1,1916 @@
+arXiv:2502.02013v2  [cs.LG]  15 Jun 2025
+Layer by Layer: Uncovering Hidden Representations in Language Models
+Oscar Skean 1 Md Rifat Arefin 2 3 Dan Zhao 4 Niket Patel 5 Jalal Naghiyev 6
+Yann LeCun4 7 Ravid Shwartz-Ziv 4 8
+Abstract
+From extracting features to generating text, the
+outputs of large language models (LLMs) typi-
+cally rely on the final layers, following the con-
+ventional wisdom that earlier layers capture only
+low-level cues. However, our analysis shows that
+intermediate layers can encode even richer rep-
+resentations, often improving performance on a
+range of downstream tasks. To explain and quan-
+tify these hidden-layer properties, we propose a
+unified framework of representation quality met-
+rics based on information theory, geometry, and
+invariance to input perturbations. Our framework
+highlights how each layer balances information
+compression and signal preservation, revealing
+why mid-depth embeddings can exceed the last
+layer’s performance. Through extensive exper-
+iments on 32 text-embedding tasks across vari-
+ous architectures (transformers, state-space mod-
+els) and domains (language, vision), we demon-
+strate that intermediate layers consistently provide
+stronger features, challenging the standard view
+on final-layer embeddings and opening new direc-
+tions on using mid-layer representations for more
+robust and accurate representations.
+1. Introduction
+Large Language Models (LLMs) have driven remarkable
+progress in natural language processing (NLP), achieving
+state-of-the-art results on many tasks (Brown et al., 2020;
+Devlin et al., 2019; Li et al., 2022). At the heart of most
+applications lies a common assumption: final-layer repre-
+sentations are the most useful for downstream tasks. Yet a
+fundamental question remains: does the final layer always
+yield the best representation?
+1University of Kentucky 2Mila-Quebec AI Institute 3University
+of Montreal 4New York University5University of California, Los
+Angeles 6Independent 7Meta FAIR 8Wand.AI. Correspondence to:
+Oscar Skean <oscar.skean@uky.edu>.
+Proceedings of the 42 nd International Conference on Machine
+Learning, Vancouver, Canada. PMLR 267, 2025. Copyright 2025
+by the author(s).
+0 20 40 60 80 100
+Layer Depth Percentage
+0.35
+0.40
+0.45
+0.50
+0.55Average Main Score
+Pythia-410m
+Mamba-370m
+BERT-base
+Figure 1: Intermediate layers consistently outperform
+final layers on downstream tasks. The average score of
+32 MTEB tasks using the outputs of every model layer as
+embeddings for three different model architectures. The
+x-axis is the depth percentage of the layer, rather than the
+layer number which varies across models.
+In this paper, we conduct a layer-wise analysis of LLMs
+across diverse architectures—including transformer-based
+ones (Vaswani et al., 2017), state-space models (SSMs)
+(Gu & Dao, 2024), and encoder-based models like BERT
+(Devlin et al., 2019)—spanning parameter scales from tens
+of millions to billions. Through systematic evaluation on
+32 embedding tasks from the Massive Text Embedding
+Benchmark (MTEB) (Muennighoff et al., 2022), we find
+that intermediate layers often surpass the final layer by up
+to 16% in downstream accuracy. Figure 1 illustrates this
+phenomenon, where mid-depth layers provide particularly
+strong representations while the very last layer can become
+overly specialized to the pretraining objective.
+A unified framework. To better understand intermedi-
+ate layers’ effectiveness, we combine three complementary
+perspectives (Section 3):
+• Information-theoretic: How much do layers com-
+press or preserve semantic information (Shwartz-Ziv
+& Tishby, 2019; Shwartz-Ziv, 2022)?
+• Geometric: How do token embeddings unfold in high-
+dimensional space (Hosseini & Fedorenko, 2023))?
+1
+Layer by Layer: Uncovering Hidden Representations in Language Models
+• Invariance: Are embeddings robust to input pertur-
+bations (e.g., InfoNCE (Oord et al., 2018), LiDAR
+(Thilak et al., 2024) and DiME (Skean et al., 2023))?
+We show that these perspectives can be viewed under a
+single lens, which clarifies how intermediate layers strike a
+balance between retaining features and discarding noise.
+Key findings and contributions. Our investigation leads
+to several important insights:
+• Intermediate layers consistently outperform final lay-
+ers. This pattern is evident in both transformers and
+SSMs, suggesting a broad architecture-agnostic effect.
+• Autoregressive vs. masked-language training.Autore-
+gressive models exhibit a pronounced mid-layer “com-
+pression valley,” whereas masked or bidirectional mod-
+els show milder intermediate changes.
+• Domain-general effect. We extend these results to vi-
+sion models and find that autoregressive image trans-
+formers display the same mid-depth bottleneck, indi-
+cating that the training objective, rather than the data
+modality, is the key driver.
+• CoT finetuning. Analyzing chain-of-thought (CoT)
+reveals that finetuning can reshape mid-layer entropy,
+preserving latent context for multi-step reasoning.
+Overall, our results challenge the default reliance on final-
+layer embeddings and highlight intermediate layers as poten-
+tially underutilized sources of meaningful features. In this
+paper, we detail our unified framework (Section 3), present
+extensive experiments in both language and vision (Sec-
+tion 4, 5, 6), and conclude with a discussion of our findings,
+their implications, and future directions. 1
+2. Related Work
+Understanding Neural Representations. A long line
+of research has aimed to understand how deep neural net-
+works encode and organize information. Early studies em-
+ployed linear probes for intermediate layers (Alain & Ben-
+gio, 2017), while subsequent efforts introduced more so-
+phisticated techniques such as SVCCA (Raghu et al., 2017)
+to compare learned features across architectures and train-
+ing regimes. Although these approaches have shed light
+on representation dynamics, most focus on vision models
+or shallow networks. In contrast, our work contributes to
+a growing body of literature extending layer-wise analy-
+sis to large-scale language models, emphasizing specific
+behaviors of intermediate layers across diverse architec-
+tures. Complementing our empirical findings, Saponati et al.
+(2025) present a theoretical analysis of how different pretext
+1We make our code available at https://github.com/
+OFSkean/information_flow
+tasks, such as next-token prediction and masked language
+modeling, influence the structure of learned representations.
+Layer-wise Analysis in Language Models. Recent work
+has increasingly focused on identifying which transformer
+layers encode different types of information. For example,
+linguistic features such as part-of-speech tags or semantic
+roles are best encoded by the middle layers of a BERT (Liu
+et al., 2019; Tenney et al., 2019; V oita et al., 2019). More re-
+cent work has shown that mid-depth layers sometimes hold
+surprisingly robust features, challenging the usual emphasis
+on final layer representations (Jin et al., 2024; Gurnee &
+Tegmark, 2023; Fan et al., 2024). A related line of work in-
+vestigates the attention sink phenomenon (Xiao et al., 2024;
+Brunner et al., 2020; Gu et al., 2025), in which attention
+disproportionately concentrates on a single token. Notably,
+intermediate decoder layers have been shown to not exhibit
+these extreme attention sinks (Barbero et al., 2025), sug-
+gesting they engage in more distributed and meaningful
+information processing than the shallow or deep layers.
+Compression and Generalization. Multiple lines of
+research link compression and generalization perfor-
+mance (Deletang et al., 2024). For instance, Bordes et al.
+(2023) demonstrated that discarding certain layers in self-
+supervised encoders can even improve downstream accu-
+racy, while Park et al. (2024a) found that LLM embed-
+dings often lie in low-dimensional manifolds. Our empirical
+study reinforces these ideas by demonstrating that many net-
+works—especially autoregressive transformers—naturally
+develop a mid-layer bottleneck that appears crucial for bal-
+ancing “signal” versus “noise.” We show how intermediate
+layers can achieve optimal trade-offs between preserving
+task-relevant information and discarding superfluous detail.
+Representation Quality Metrics. A variety of metrics
+have been proposed to quantify the “quality” of learned
+representations. We group them into three main categories:
+• Information-theoretic measures capture how much a
+model’s internal representations compress or preserve
+relevant information. For example, the Information
+Bottleneck (Shwartz-Ziv & Tishby, 2019; Shwartz-Ziv,
+2022) analyzes whether intermediate layers discard
+noise while retaining essential features. Intrinsic di-
+mensionality, which describes the minimum number
+of features to represent data, has also been used to ana-
+lyze intermediate layers in LLMs (Cheng et al., 2025;
+Valeriani et al., 2023; Razzhigaev et al., 2024). This
+line of work has shown semantic abstractions useful for
+downstream tasks are better encoded in middle layers
+than last layers in large transformer models. While
+we do not study intrinsic dimensionality in our subse-
+quent analysis, it would make a promising direction
+2
+Layer by Layer: Uncovering Hidden Representations in Language Models
+for future work.
+• Geometric measures focus on the structure of embed-
+dings in high-dimensional space. Classical approaches
+include analyzing singular values and effective rank of
+the representation matrix (Garrido et al., 2023). The
+anisotropy metric of Razzhigaev et al. (2024) has been
+used to study compression in intermediate model lay-
+ers and we compare our results with their findings in
+Section 4.2. Anisotropy fits in well with our proposed
+framework, though we leave a formal integration to
+future work. Recent work explores curvature (Hosseini
+& Fedorenko, 2023) to quantify how smoothly tokens
+are mapped across consecutive positions or time steps.
+• Task-based or invariance metricsevaluate how well
+representations support downstream goals. For in-
+stance, augmentations-based approaches such as In-
+foNCE (Oord et al., 2018) and LiDAR (Thilak et al.,
+2024) estimate invariance to perturbations, while meth-
+ods like NESum or Self-Cluster (Agrawal et al., 2022)
+link closely to entropy. In computer vision, these
+scores often correlate strongly with downstream ac-
+curacy, highlightFing how robust the embeddings are.
+Although these representation quality metric categories may
+appear distinct, we show (Section 3) that many can be uni-
+fied under a single lens. This unification illuminates why
+certain intermediate layers balance compression, geometry,
+and invariance so effectively, leading to better representa-
+tions for downstream tasks.
+Overall, our work bridges these overlapping threads by eval-
+uating a range of architectures and training paradigms via
+a unified set of metrics. Beyond merely confirming that
+intermediate layers can be effective, we elucidate why this
+happens, tying it to fundamental properties such as entropy,
+invariance, and geometry. This novel perspective provides
+an avenue for both finer-grained diagnostics of large lan-
+guage models and more deliberate design of mid-layer rep-
+resentations for downstream tasks.
+3. A Unified Framework for Neural
+Representations
+Key Takeaway: Matrix-based entropy unifies seem-
+ingly disparate metrics of representation quality, pro-
+viding a single theoretical lens for analyzing com-
+pression, geometry, and invariance.
+A central challenge in analyzing internal representations is
+determining how to assess their quality. Although existing
+work draws on numerous ideas—from mutual information
+to geometric manifold analysis to invariance under augmen-
+tations—these threads can seem disparate. In this section,
+we consolidate them into a unified theoretical framework
+that shows how these seemingly different metrics connect
+and why they collectively measure “representation quality.”
+3.1. Notation and Motivation
+Consider a neural network that maps inputs x (e.g., tokens
+in a sequence) to internal hidden states Z. We denote Z ∈
+RN ×D as a matrix of N data samples (or tokens) in D
+dimensions. Some key questions arise:
+1. How compressed are these representations?
+2. How robust are they to perturbations or augmentations?
+3. How do they geometrically organize different inputs?
+Answers to these questions can illuminate which layers
+strike the right balance between preserving relevant features
+and discarding noise.
+3.2. Matrix-Based Entropy: A Common Theoretical
+Thread
+We focus on a key quantity known as matrix-based entropy
+(Giraldo et al., 2014; Skean et al., 2023), which applies
+directly to the Gram matrix K = ZZ⊤. Let {λi(K)} be
+the (nonnegative) eigenvalues of K. For any order α > 0,
+define:
+Sα(Z) = 1
+1 − α log
+ rX
+i=1
+
+λi(K)
+tr(K)
+α
+, (1)
+where r = rank( K) ≤ min(N, D). Intuitively, if only
+a few eigenvalues dominate, Sα(Z) is small—indicating
+a highly compressed representation. Conversely, if Z is
+spread out across many principal directions, Sα(Z) is large.
+By varying α, one smoothly transitions between notions
+like collision entropy (α = 2) and von Neumann entropy
+(α → 1). We will typically use α = 1 for simplicity.
+Bridging geometry, invariance, and feature locality. A
+key benefit of matrix-based entropy is that it unifies multiple
+representational perspectives:
+• Compression or information content: A handful of
+large eigenvalues in K = ZZ⊤ indicates that Z is low-
+rank, i.e. the model has collapsed much of the input
+variation into fewer dimensions. In contrast, a more
+uniform eigenvalue spectrum implies higher-entropy,
+more diverse features.
+• Geometric smoothness: If tokens within a prompt
+follow a trajectory in embedding space with sharp
+turns, that curvature can manifest as skewed eigenvalue
+spectra (Hosseini & Fedorenko, 2023). Curvature also
+differentiates local transitions (token-to-token) from
+global structural patterns across longer segments or
+entire prompts.
+3
+Layer by Layer: Uncovering Hidden Representations in Language Models
+• Invariance under augmentations: Metrics like In-
+foNCE (Oord et al., 2018) and LiDAR (Thilak et al.,
+2024) effectively measure whether augmentations of
+the same sample (e.g. character swaps) map to similar
+embeddings. Strong invariance corresponds to stable
+clustering in ZZ⊤, which again depends on the distri-
+bution of eigenvalues and how local vs. global features
+are retained or discarded.
+Thus, evaluating Sα(Z) provides a single lens for assess-
+ing “representation quality” across compression, geometric
+structure, and invariance—and highlights how both local
+details and global patterns are organized.
+3.3. Representation Evaluation Metrics
+Key Takeaway: Information-theoretic, geometric,
+and invariance-based metrics offer complementary
+perspectives on representation quality that can all
+be understood through matrix-based entropy.
+We now introduce the seven representation evaluation met-
+rics used in our experiments, grouped into three broad cat-
+egories: (1) information-theoretic, (2) geometric, and (3)
+augmentation-invariance. All relate back to the Gram ma-
+trix K and hence to Eq. (1).
+3.3.1. I NFORMATION -T HEORETIC METRICS
+Prompt Entropy. Following Wei et al. (2024), we apply
+matrix-based entropy (Eq. 1) to the token embeddingswithin
+a single prompt. This prompt entropy quantifies how widely
+tokens are spread in the embedding space. Higher entropy
+indicates more diverse, less redundant token-level features;
+lower entropy implies stronger compression.
+Dataset Entropy. We can also aggregate embeddings
+across N prompts by taking the mean token embedding
+of each prompt to form Z ∈ RN ×D. Applying entropy to Z
+yields a dataset-level measure of global diversity—revealing
+how distinctly the model separates different inputs.
+Effective Rank. (Roy & Vetterli, 2007) can be shown to
+be a lower bound to exp(S1(Z)), highlighting how dimen-
+sionality effectively shrinks if the representation is strongly
+compressed. We prove this connection in Theorem 1. This
+has implications for popular representation evaluation met-
+rics such as RankMe (Garrido et al., 2023) and LiDAR (Thi-
+lak et al., 2024), which are both inspired by Effective Rank.
+3.3.2. G EOMETRIC METRICS
+Curvature. Proposed by Hosseini & Fedorenko (2023),
+curvature captures how sharply the token embeddings turn
+when viewed as a sequence inRD. For a prompt of length L,
+let vk = zk+1 − zk be the difference between consecutive
+tokens. The average curvature is:
+¯C = 1
+L − 2
+L−2X
+k=1
+arccos
+ v⊤
+k+1vk
+∥vk+1∥∥vk∥
+
+.
+Higher curvature means consecutive tokens shift direction
+abruptly and more local level features; lower curvature sug-
+gests a smoother trajectory and global level features.
+3.3.3. A UGMENTATION INVARIANCE METRICS
+Lastly, we assess how stable the model’s representations
+are to small perturbations of the same input (e.g., random
+character swaps, keyboard-level changes; see Appendix).
+Suppose a prompt pi is augmented into p(a)
+i and p(b)
+i . After
+embedding these, we compare the row vectors in Z1, Z2 ∈
+RN ×D under different scoring criteria:
+InfoNCE. This self-supervised objective (Oord et al.,
+2018) encourages matched samples to lie close in embed-
+ding space while pushing unmatched samples away. Alower
+InfoNCE loss indicates stronger invariance to augmentation.
+LiDAR. LiDAR (Thilak et al., 2024) uses a linear discrim-
+inant approach that measures within-class versus between-
+class scatter. Treating each prompt as its own class, LiDAR
+checks how well augmentations form tight clusters.
+DiME. Similarly, DiME (Skean et al., 2023) is grounded
+in matrix-based entropy. It compares real paired samples
+against random pairings to estimate how uniquely aligned
+correct augmentations are.
+3.4. Core Theoretical Results
+Key Takeaway: Our theoretical framework estab-
+lishes concrete connections between representation
+entropy and downstream performance through prop-
+erties like effective rank and invariance.
+Here, we summarize key statements that justify why these
+metrics meaningfully measure representation quality. We
+refer to the appendix G for details and proofs. Beyond serv-
+ing as a unifying view, matrix-based entropy also connects
+to foundational concepts like majorization, Schur concav-
+ity, and mutual information. Furthermore, we can directly
+relate the eigenvalue entropy to the matrix entropy, most
+naturally via the Effective Rank (Roy & Vetterli, 2007). The
+following theorem makes this connection explicit.
+Theorem 1 (Lower Bound via Effective Rank) . For
+Shannon-based entropy (α → 1),
+EffRank(Z) ≤ exp
+ 
+S1(Z)
+
+,
+4
+Layer by Layer: Uncovering Hidden Representations in Language Models
+meaning a large effective rank implies a high entropy.
+Under appropriate conditions on the data distribution and
+model, we can show connections between prompt entropy
+and dataset entropy via the following scaling behaviors:
+Theorem 2 (Informal).
+1. If prompt entropy remains near its maximum for all
+prompts, then the dataset entropy S2
+ 
+Z Z
+⊤
+grows on
+the order of log
+  L2
+N
+
+.
+2. If prompt entropy instead stays near its minimum for
+all prompts, then dataset entropy grows more slowly,
+on the order of log
+  L2
+N 3
+
+.
+In short, high token-level (prompt) diversity encourages
+broader global diversity in the dataset-level embeddings,
+whereas over-compressing token representations can limit
+how effectively different prompts separate. Our subsequent
+analysis connects these ideas to self-supervised objectives
+like InfoNCE, which also tie higher entropy to stronger ro-
+bustness and discriminability in the learned representations.
+Theorem 3 (Dataset Entropy Bounds InfoNCE). For data
+X and representation Z(X), the InfoNCE loss on N sam-
+ples satisfies:
+log(N) − InfoNCE ≤ I(X; Z) ≤ H(Z),
+where H(Z) is interpretable as matrix-based entropy at the
+dataset level. Hence, reducing InfoNCE implies learning a
+higher-entropy (and thus often more robust) representation.
+Practical outlook. Overall, our theoretical analysis shows
+that compression (entropy), geometry (curvature, rank), and
+invariance (e.g. InfoNCE) are all facets of how the Gram
+matrix ZZ⊤ distributes variance. Examining these met-
+rics across different layers reveals exactly where a network
+“prunes” redundancy (low entropy) versus preserving essen-
+tial distinctions (high entropy). This unified perspective also
+facilitates cross-architecture comparisons (e.g. transformers
+vs. SSMs) by highlighting how each architecture organizes
+information internally. Beyond offering a theoretical founda-
+tion, it provides a practical blueprint for diagnosing, tuning,
+and improving hidden-layer representations.
+4. Empirical Results
+In this section, we empirically test our theoretical framework
+through extensive experiments across architectures, scales,
+and training regimes. We focus on three key questions:
+• Do intermediate layers consistently outperform fi-
+nal layers across diverse downstream tasks?
+• How do these intermediate representations differ
+across architectures, training stages, and scales?
+• How does post-training methods (e.g., fine-tuning
+and chain-of-thought) reshape representations?
+4.1. Downstream Task Performance
+Key Takeaway: Intermediate layers of language
+models consistently outperform final layers across
+all architectures and tasks, challenging the conven-
+tional wisdom of using final-layer representations.
+In this section, we use intermediate layers for downstream
+embedding tasks and employ our unified framework from
+Section 3, measuring all the embeddings across all layers.
+4.1.1. E XPERIMENTAL SETUP
+Models We evaluate three distinct architectural families:
+Pythia and Llama3 (decoder-only transformers) (Biderman
+et al., 2023; Dubey et al., 2024), Mamba (state space
+model) (Gu & Dao, 2024), BERT (encoder-only trans-
+former) (Devlin et al., 2019) and LLM2Vec models (bidi-
+rectional attention) (Behnam Ghader et al., 2024).
+Tasks We test each layer’s embeddings on 32 tasks from
+the Massive Text Embedding Benchmark (MTEB) (Muen-
+nighoff et al., 2022), spanning classification, clustering, and
+reranking dor a comprehensive evaluation across various
+tasks. We refer to the Appendix for details.
+4.1.2. I NTERMEDIATE LAYERS OFTEN OUTPERFORM
+FINAL LAYERS
+Are final-layer embeddings indeed optimal for downstream
+tasks? In Figure 1, we compare average performance on
+MTEB tasks across all layers of the three models.
+Key observation. In nearly every task, some intermediate
+layer outperforms the final layer.The absolute improvement
+ranges from 2% to as high as 16% on average, and the best
+layer often resides around the mid-depth of the network.
+This phenomena is consistent across all the different archi-
+tectures. This confirms emerging observations in recent
+work for generation tasks (Bordes et al., 2023; El-Nouby
+et al., 2024; Chen et al., 2020; Fan et al., 2024) and extends
+them to a wider range of benchmarks and tasks.
+Why do these layers matter? From our theoretical per-
+spective, intermediate layers appear to strike a balance
+between retaining sufficient information (avoiding over-
+compression) and discarding low-level noise. Later in Sec-
+tion 4.2, we show that these sweet spots are not random but
+tied to how intermediate layers are processing information.
+5
+Layer by Layer: Uncovering Hidden Representations in Language Models
+0 20 40 60 80 100
+Layer Depth Percentage
+6.0
+7.5
+9.0
+Normalized Prompt Entropy
+×10 1
+Pythia
+Mamba
+BERT
+(a) Prompt Entropy
+0 25 50 75 100
+Layer Depth Percentage
+1.04
+1.08
+1.12
+1.16
+Curvature
+ (b) Curvature
+0 20 40 60 80 100
+Layer Depth Percentage
+2
+3
+4LiDAR
+ (c) LiDAR
+Figure 2: Pythia and Mamba’s intermediate layers show pronounced changes in representation quality metrics, while
+BERT’s remain more stable.Three representation evaluation metrics calculated on the wikitext dataset for every layer in
+Pythia-410M, Mamba 370M, and BERT-base architectures. The x-axis denotes layer depth as a percentage, allowing fair
+comparison between models with different layer counts.
+4.1.3. L AYER-W ISE METRICS CORRELATE WITH
+DOWNSTREAM PERFORMANCE
+To validate our framework, we analyze how each evaluation
+metric correlates with downstream performance. Figures 3
+and 8 show distance correlations between metrics and task
+scores for Pythia-410M. We find that all metrics exhibit
+strong relationships with downstream performance. Among
+them, curvature, DiME, and InfoNCE stand out with partic-
+ularly high correlations. These associations remain robust
+across different correlation measures, including Spearman
+and Kendall, reinforcing the reliability of our findings.
+Our results suggest that our metrics capture some aspects of
+intermediate representations that contribute to downstream
+utility. In Appendix E, we leverage these strong correlations
+to select high-performing layers in an unsupervised manner,
+following (Agrawal et al., 2022; Garrido et al., 2023; Thi-
+lak et al., 2024). In short, we can identify an intermediate
+layer that surpasses the final layer in downstream perfor-
+mance—without using any task-specific labels. For instance,
+using DiME-based layer selection leads to a 3% average
+improvement in MTEB scores for the Pythia-410M model.
+4.2. Architectural and Scale Differences
+Key Takeaway: Different architectures exhibit dis-
+tinct patterns of information compression. Autore-
+gressive models show mid-layer bottlenecks while
+bidirectional models maintain more uniform trends.
+Aside from strong correlations with downstream perfor-
+mance, we can use our evaluation framework to assess the
+internal behaviors of LLMs. In both this section and Sec-
+tion 4.3, we use WikiText-103 (Merity et al., 2017) for
+analyzing our representation metrics on standard textual
+data. To investigate how architecture and model size influ-
+ence representation quality, we compare three fundamen-
+tally different LLM variants—BERT (encoder-only), Pythia
+(decoder-only), and Mamba (state-space model)—and then
+scale up Pythia to observe emerging trends.
+Encoder vs. Decoder vs. SSM. Figure 2 shows how
+prompt entropy, curvature, and augmentation metrics evolve
+across each model’s layers. BERT, which encodes the en-
+tire input bidirectionally, generally maintains high entropy
+across layers, suggesting minimal compression: the model
+can see all tokens at once and need not discard as much
+information. By contrast, the decoder-only Pythia exhibits
+a strong mid-layer entropy dip, reflecting its autoregressive
+objective’s tendency to filter or prune non-local details in
+the middle of the network. As a result, Pythia’s “sweet spot”
+for downstream tasks often lies around mid-depth, where it
+LiDAR Dataset
+ Entropy
+Prompt
+ Entropy
+InfoNCE Curvature DiME
+Representation Metrics
+0.00
+0.25
+0.50
+0.75
+1.00Distance Correlation (dCor)
+Figure 3: Relationship between representation metrics
+and task performance averaged across layers for Pythia
+410M. Using distance correlation (dCor), we see strong as-
+sociative relationships across the board with DiME exhibit-
+ing the strongest relationship with downstream performance.
+We use dCor due to its robustness and ability to measure
+both linear and non-linear relationships (dCor ∈ [0, 1] with
+0 indicating statistical independence and 1 indicating strong
+dependency). We defer additional results to the Appendix.
+6
+Layer by Layer: Uncovering Hidden Representations in Language Models
+balances essential context and compression. Mamba, mean-
+while, processes sequences through a state-space approach
+that yields flatter, more uniform curves across depth: it nei-
+ther retains as much information as BERT nor compresses
+as aggressively as Pythia’s mid-layers. These conclusions
+align with Razzhigaev et al. (2024) which showed a flat
+layer-wise anisotropy for encoder models and a spike in
+intermediate layer anisotropy for decoder models.
+Scaling Size Effects. In Figure 12, we analyze Pythia
+models ranging from 14M to 1B parameters. Larger models
+display more pronounced intermediate compression (en-
+tropy dips), indicating a heightened ability to distill relevant
+features. We also observe smoother token trajectories (lower
+curvature) and stronger invariance (higher LiDAR), consis-
+tent with findings that bigger models more effectively filter
+noise and capture long-range dependencies. These trends re-
+inforce why performance peaks in the middle of the network:
+larger models hold more capacity to compress intermediate
+representations, yet still preserve crucial semantic details.
+Finetuning Effects In Figure 13, we study how finetuning
+affects the internal representations of Llama3 (Dubey et al.,
+2024). We compare the baseline Llama3-8B to two fine-
+tuned LLM2Vec models (Behnam Ghader et al., 2024). The
+LLM2Vec-mntp-unsup-simcse model enables bidirectional
+attention in Llama3 and goes through two unsupervised
+training phases to improve Llama3’s performance on em-
+bedding tasks. The LLM2Vec-mntp-supervised adds an
+additional supervised finetuning phase. It is clear that both
+finetuned models have improved augmentation invariance.
+Furthermore, the unsupervised model has higher prompt
+entropy than Llama3 while the supervised model has less.
+Layer-Level Analysis of Transformer Sub-Components.
+While our experiments treat each transformer layer as a
+single unit, transformer blocks are composed of multiple
+sub-layers (pre-attention normalization, self-attention, resid-
+uals, MLPs). By measuring entropy after each sub-layer,
+we find in Figure 15 that residual connections drive the mid-
+network compression observed in Section 4.2. Specifically:
+• Sub-layers before residuals (e.g. pre-attention, atten-
+tion scores, or MLP pre-residual outputs) often show
+only mild compression.
+• Residual sub-layers exhibit a pronounced drop in en-
+tropy, indicating a significant filtering of information.
+A concurrent study (Csordás et al., 2025) observed a
+decrease in the residual stream norm in the second half
+of decoder models, reinforcing our findings.
+The strong entropy “valley” at intermediate layers is tied
+to how residual paths merge new signals with the existing
+hidden state. This aligns with prior work indicating that
+residuals act as a regularizer (Marion et al., 2024), smooth-
+ing out spurious components in hidden representations.
+4.3. Impact of Training Progression
+Takeaway: Significant changes during training oc-
+cur in intermediate layers and early layers stabilize
+quickly, supporting the detokenization hypothesis.
+We measure Pythia’s metrics at multiple checkpoints to un-
+derstand how layer-wise representations evolve throughout
+training (Figures 4 and 11). Two main observations emerge:
+Intermediate Layers Undergo the Most Change. The
+largest shifts in representation quality occur in mid-depth
+layers. Specifically, prompt entropy steadily decreases there
+as training progresses, implying that intermediate layers
+increasingly compress and abstract the input. Meanwhile,
+LiDAR scores are minimal in these same layers. Likewise,
+curvature becomes smoother in the middle of the network,
+suggesting the model refines its internal structure to capture
+longer-range or more nuanced patterns in language.
+Early Layers Stabilize Quickly. In contrast to interme-
+diate layers, the earliest layers change very little after the
+initial phase of training. This observation aligns with the
+“detokenization” hypothesis of Lad et al. (2024), which
+posits that the main functional role of early layers is to
+convert raw tokens into a basic embedding space. This idea
+is closely related to the “shared task” layers of Zhao et al.
+(2024), introduced in the context of instruction tuning on
+diverse tasks. In particular, they show that the first nine lay-
+ers of LlaMA 2 7B (Touvron et al., 2023) perform general
+task-agnostic operations. As a result, the most substantial
+changes to representations, such as enhanced compression,
+are driven primarily by the intermediate layers, reinforcing
+their importance for learning robust, high-level features.
+4.4. Impact of Chain-of-Thought Finetuning
+Key Takeaway: CoT finetuning enables models to
+maintain richer context throughout their layers.
+Recent work has highlighted Chain-of-Thought (CoT) fine-
+tuning as a powerful strategy for improving reasoning capa-
+bilities (Arefin et al., 2025; DeepSeek-AI, 2025). To exam-
+ine its effects on representations, in Figure 5 we compare
+Qwen 2.5 and Qwen 2.5-Math (Yang et al., 2024), where
+the latter underwent additional math pretraining and CoT
+finetuning. Measuring token-level prompt entropy across
+sequence length reveals that the finetuned model maintains
+higher entropy with lower variance across examples.
+7
+Layer by Layer: Uncovering Hidden Representations in Language Models
+(a) Prompt Entropy
+ (b) Curvature
+ (c) LiDAR
+Figure 4: Strong trends in intermediate behavior emerge during trainingRepresentation evaluation metrics across layers
+at various Pythia-410M training checkpoints, ranging from step 1 to the final step at 143k. The x-axis is the model layer,
+showing how training affects different layers, while the colors are different checkpoints during training.
+Figure 5: Token-level prompt entropy across sequence
+lengths for Qwen 2.5 and Qwen 2.5-Math. The base model
+(Qwen 2.5) exhibits greater prompt compression, while the
+finetuned (Qwen 2.5-Math) has higher entropy, indicating
+more information retention.
+These findings suggest that CoT finetuning encourages mod-
+els to preserve more context throughout their hidden layers,
+enabling better multi-step reasoning. Our framework pro-
+vides a quantitative lens into how CoT fine-tuning pushes
+models to maintain richer internal representations across
+sequences, explaining its effectiveness in multi-step tasks.
+While CoT traces can be inspected directly in these models,
+our approach is particularly valuable for analyzing models
+that reason in continuous latent space (Hao et al., 2024).
+5. Extreme Input Conditions
+To better probe the underlying factors affecting represen-
+tation quality, we inspect each layer’s responsiveness to
+different input types. We use Pythia-410M on three types
+of extreme prompts and measure prompt entropy across
+layers (Figure 6). We prove examples of these prompts in
+Appendix F. Overall, we find that:
+1. Token repetition compresses intermediate layers.
+As p increases (i.e., more repeated tokens), prompt en-
+tropy decreases sharply in mid-depth layers, suggesting
+that the model recognizes/encodes repetitive patterns
+and discards redundancy in its internal representation.
+2. Random tokens inflate early-layer entropy. Adding
+token-level randomness, increases entropy significantly
+in early layers, revealing their sensitivity to noise. In
+contrast, deeper layers are more robust.
+Overall, these results confirm that intermediate layers play
+a major role in handling complex or unusual inputs, selec-
+tively compressing or filtering out repetitive patterns while
+retaining crucial distinctions. Early layers are more sensitive
+to noise and the incremental benefit of adding more tokens
+diminishes with prompt length. This behavior highlights the
+diverse ways in which different layers balance the trade-off
+between preserving and discarding information, underscor-
+ing the significance of intermediate representations.
+6. Comparison to Vision Transformers
+Do our findings extend to other domains like computer
+vision? Vision models employ diverse architectures and
+training objectives from fully supervised learning to self-
+supervised methods, and from bidirectional to autoregres-
+sive encoders. Their diversity provides an ideal testbed to
+examine how well our findings generalize and how different
+training objectives shape internal representations.
+We examine several representative vision approaches:
+ViT (Dosovitskiy et al., 2021), a supervised transformer
+trained on labeled data; CLIP (Radford et al., 2021), a
+weakly supervised image encoder; BEiT (Bao et al., 2022),
+a self-supervised encoder that reconstructs masked patches;
+DINOv2 (Oquab et al., 2024), a self-supervised approach
+leveraging augmentations and exponential moving average
+teachers; MAE (He et al., 2022), a self-supervised approach
+8
+Layer by Layer: Uncovering Hidden Representations in Language Models
+0 5 10 15 20
+Layer
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9Average Normalized Prompt Entropy
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+Percent of T oken Repetition
+(a) Repetition
+0 5 10 15 20
+Layer
+0.6
+0.7
+0.8
+0.9
+1.0Average Normalized Prompt Entropy
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+Percent of T oken Randomness (b) Randomness
+0 5 10 15 20
+Layer
+3.0
+3.5
+4.0
+4.5
+5.0
+5.5
+6.0
+6.5Average Prompt Entropy
+64
+128
+256
+512
+1024
+Prompt T oken Length (log scale) (c) Random Prompt Length
+Figure 6: Prompt entropy across layers of Pythia 410M under various extreme input conditions. (a) Increasing token
+repetition leads to decreased entropy in intermediate layers. (b) Increasing token randomness results in higher entropy,
+especially in initial layers. (c) Unnormalized prompt entropy increases with prompt length due to the larger number of
+tokens. These results demonstrate how the model’s internal representations adapt to different types of input perturbations.
+that reconstructs images from masked patches; AIM (El-
+Nouby et al., 2024), an autoregressive transformer that pre-
+dicts the next patch in an image sequence (GPT-style next-
+token prediction); and AIMv2 (Fini et al., 2025), which
+extends AIM with a multimodal next-token prediction task.
+In Figure 14, we evaluate every model layer on ImageNet-1k
+with attention probing and our suite of metrics.
+AIM exhibits behavior similar to language models.
+AIM, which predicts image patches sequentially, exhibits
+the same entropy "valley" and accuracy peak at intermedi-
+ate layers that we observed in language models like Pythia.
+This pattern suggests that autoregressive training, whether
+over text tokens or image patches, consistently creates a
+mid-depth information bottleneck. The sequential predic-
+tion constraint forces models to compress non-local con-
+textual information early in processing, then selectively
+re-expand the most relevant features for accurate predic-
+tion. AIM’s strong intermediate performance was first noted
+in (El-Nouby et al., 2024). Interestingly, while the AIMv2
+model does not show improved intermediate accuracy, it still
+produces an entropy valley. We hypothesize this difference
+is due to the multimodal text-vision pretext task, which may
+alter information compression dynamics.
+Vision transformers behave differently from language
+models. All models except for AIM exhibit strictly in-
+creasing downstream accuracy toward final layers. Similar
+trends have been shown for ResNets (Sorscher et al., 2022),
+where few-shot classification error is strictly decreasing
+across layers. Most non-autoregressive vision models show
+steadily increasing dataset entropy. The notable exception is
+BEIT, which exhibits a substantial intermediate dip. Taken
+together, the results suggest that without an autoregressive
+objective, vision transformers have less need for drastic
+transformations at mid-depth.
+Autoregression as the driving factor. The strong mid-
+layer compression observed in LLMs seems to be not purely
+a property of “sequential token data” vs. “image patch data,”
+but rather a byproduct of pretraining. While various self-
+supervised (or fully supervised) objectives in vision foster
+more uniform feature building across layers, autoregressive
+vision models develop similar mid-layer bottlenecks that
+we see in language. Thus, the objective design–whether or
+not a model is autoregressive—appears crucial in shaping
+layer-wise representation quality, regardless of domain.
+7. Discussion and Conclusion
+We investigated the representation quality of intermediate
+layers in LLMs and their role in downstream task perfor-
+mance. We introduced a unified framework of evaluation
+metrics, establish theoretical connections among them, and
+apply these metrics to analyze transformer-based architec-
+tures, SSMs, and vision models. A key phenomenon un-
+veiled by prompt entropy was an information bottleneck
+in the middle layers of autoregressive transformers in both
+vision and language domains. Furthermore, we show that
+intermediate layers often surpass final layers in representa-
+tion quality, holding implications for feature relevance and
+extraction. DiME, curvature, and infoNCE correlate well
+with downstream performance, suggesting a fundamental
+connection between representation and generalizability.
+In conclusion, our work studies the internal representation
+dynamics in LLMs, offering theoretical and empirical in-
+sights as well as practical implications for optimizing model
+design and training strategies. Future work should further
+investigate the underlying causes of intermediate layer com-
+pression and do explicit finetuning to control compression.
+9
+Layer by Layer: Uncovering Hidden Representations in Language Models
+Impact Statement
+Our paper studies the inner workings of large language
+models with findings that may challenge typical assump-
+tions about the importance of intermediate layers in large
+language models and the representations they learn. Our
+findings suggest that representations from these layers can
+yield better performance on a variety of downstream tasks,
+which can have implications for model interpretability, ro-
+bustness, and efficiency.
+From an ethical standpoint, the ability to leverage
+intermediate-layer representations could impact fairness and
+bias considerations in evaluating model performance or in
+model deployment. By helping better identify latent features
+and representations, our approach may amplify latent biases.
+We welcome and encourage future work to explore methods
+that can ensure that intermediate-layer representations do
+not disproportionately reinforce biases or lead to unintended
+disparities in real-world applications.
+Acknowledgements
+We thank the anonymous reviewers for their valuable feed-
+back, which helped improve the clarity and presentation of
+our results. We are also grateful to Diego Doimo, Artemii
+Novoselov, Jhoan Keider Hoyos Osorio, Luis Sanchez, and
+Matteo Saponati (listed alphabetically) for fruitful discus-
+sions and helpful pointers to related literature. Oscar Skean
+is supported by the Office of the Under Secretary of De-
+fense for Research and Engineering under award number
+FA9550-21-1-0227.
+References
+Agrawal, K. K., Mondal, A. K., Ghosh, A., and Richards,
+B. α-ReQ: Assessing representation quality in self-
+supervised learning by measuring eigenspectrum decay.
+NeurIPs, 2022.
+Alain, G. and Bengio, Y . Understanding intermediate layers
+using linear classifier probes. ICLR, 2017.
+Arefin, M. R., Subbaraj, G., Gontier, N., LeCun, Y ., Rish,
+I., Shwartz-Ziv, R., and Pal, C. Seq-VCR: Preventing
+collapse in intermediate transformer representations for
+enhanced reasoning. ICLR, 2025.
+Bach, F. Information theory with kernel methods. IEEE
+Transactions on Information Theory, 2022.
+Bao, H., Dong, L., Piao, S., and Wei, F. BeIT: Bert pre-
+training of image transformers. ICLR, 2022.
+Barbero, F., Arroyo, A., Gu, X., Perivolaropoulos, C., Bron-
+stein, M., Veliˇckovi´c, P., and Pascanu, R. Why do LLMs
+attend to the first token? arXiv, 2025.
+Behnam Ghader, P., Adlakha, V ., Mosbach, M., Bahdanau,
+D., Chapados, N., and Reddy, S. LLM2Vec: Large lan-
+guage models are secretly powerful text encoders.COLM,
+2024.
+Biderman, S., Schoelkopf, H., Anthony, Q. G., Bradley,
+H., O’Brien, K., Hallahan, E., Khan, M. A., Purohit,
+S., Prashanth, U. S., Raff, E., et al. Pythia: A suite
+for analyzing large language models across training and
+scaling. ICML, 2023.
+Boes, P., Eisert, J., Gallego, R., Müller, M. P., and Wilming,
+H. V on neumann entropy from unitarity.Physical review
+letters, 2019.
+Bordes, F., Balestriero, R., Garrido, Q., Bardes, A., and Vin-
+cent, P. Guillotine regularization: Why removing layers
+is needed to improve generalization in self-supervised
+learning. TMLR, 2023.
+Brown, T., Mann, B., Ryder, N., Subbiah, M., Kaplan, J. D.,
+Dhariwal, P., Neelakantan, A., Shyam, P., Sastry, G.,
+Askell, A., Agarwal, S., Herbert-V oss, A., Krueger, G.,
+Henighan, T., Child, R., Ramesh, A., Ziegler, D., Wu, J.,
+Winter, C., Hesse, C., Chen, M., Sigler, E., Litwin, M.,
+Gray, S., Chess, B., Clark, J., Berner, C., McCandlish,
+S., Radford, A., Sutskever, I., and Amodei, D. Language
+models are few-shot learners. NeurIPs, 2020.
+Brunner, G., Liu, Y ., Pascual, D., Richter, O., Ciaramita, M.,
+and Wattenhofer, R. On identifiability in transformers.
+ICLR, 2020.
+Burns, C., Ye, H., Klein, D., and Steinhardt, J. Discovering
+latent knowledge in language models without supervision.
+ICLR, 2023.
+Chen, M., Radford, A., Child, R., Wu, J., Jun, H., Luan,
+D., and Sutskever, I. Generative pretraining from pixels.
+ICML, 2020.
+Cheng, E., Doimo, D., Kervadec, C., Macocco, I., Yu,
+J., Laio, A., and Baroni, M. Emergence of a high-
+dimensional abstraction phase in language transformers.
+ICLR, 2025.
+Csordás, R., Manning, C. D., and Potts, C. Do language
+models use their depth efficiently? arXiv, 2025.
+DeepSeek-AI. Deepseek-R1: Incentivizing reasoning capa-
+bility in LLMs via reinforcement learning. arXiv, 2025.
+Deletang, G., Ruoss, A., Duquenne, P.-A., Catt, E., Ge-
+newein, T., Mattern, C., Grau-Moya, J., Wenliang, L. K.,
+Aitchison, M., Orseau, L., et al. Language modeling is
+compression. ICLR, 2024.
+10
+Layer by Layer: Uncovering Hidden Representations in Language Models
+Devlin, J., Chang, M.-W., Lee, K., and Toutanova, K. BERT:
+Pre-training of deep bidirectional transformers for lan-
+guage understanding. NAACL, 2019.
+Dosovitskiy, A., Beyer, L., Kolesnikov, A., Weissenborn,
+D., Zhai, X., Unterthiner, T., Dehghani, M., Minderer, M.,
+Heigold, G., Gelly, S., et al. An image is worth 16x16
+words: Transformers for image recognition at scale.ICLR,
+2021.
+Dubey, A., Jauhri, A., Pandey, A., Kadian, A., Al-Dahle, A.,
+Letman, A., Mathur, A., Schelten, A., Yang, A., Fan, A.,
+et al. The Llama 3 herd of models. arXiv, 2024.
+El-Nouby, A., Klein, M., Zhai, S., Bautista, M. A., Toshev,
+A., Shankar, V ., Susskind, J. M., and Joulin, A. Scalable
+pre-training of large autoregressive image models. ICML,
+2024.
+Fan, S., Jiang, X., Li, X., Meng, X., Han, P., Shang, S., Sun,
+A., Wang, Y ., and Wang, Z. Not all layers of LLMs are
+necessary during inference. arXiv, 2024.
+Fini, E., Shukor, M., Li, X., Dufter, P., Klein, M.,
+Haldimann, D., Aitharaju, S., da Costa, V . G. T., Béthune,
+L., Gan, Z., et al. Multimodal autoregressive pre-training
+of large vision encoders. CVPR, 2025.
+Garrido, Q., Balestriero, R., Najman, L., and Lecun, Y .
+RankMe: Assessing the downstream performance of
+pretrained self-supervised representations by their rank.
+ICML, 2023.
+Giraldo, L. G. S., Rao, M., and Principe, J. C. Measures of
+entropy from data using infinitely divisible kernels. IEEE
+Transactions on Information Theory, 2014.
+Gu, A. and Dao, T. Mamba: Linear-time sequence modeling
+with selective state spaces. COLM, 2024.
+Gu, X., Pang, T., Du, C., Liu, Q., Zhang, F., Du, C., Wang,
+Y ., and Lin, M. When attention sink emerges in language
+models: An empirical view. ICLR, 2025.
+Gurnee, W. and Tegmark, M. Language models represent
+space and time. arXiv, 2023.
+Hao, S., Sukhbaatar, S., Su, D., Li, X., Hu, Z., Weston, J.,
+and Tian, Y . Training large language models to reason in
+a continuous latent space. arXiv, 2024.
+He, K., Chen, X., Xie, S., Li, Y ., Dollár, P., and Girshick, R.
+Masked autoencoders are scalable vision learners. CVPR,
+2022.
+Hosseini, E. and Fedorenko, E. Large language models im-
+plicitly learn to straighten neural sentence trajectories to
+construct a predictive representation of natural language.
+NeurIPs, 2023.
+Jin, M., Yu, Q., Huang, J., Zeng, Q., Wang, Z., Hua, W.,
+Zhao, H., Mei, K., Meng, Y ., Ding, K., et al. Explor-
+ing concept depth: How large language models acquire
+knowledge at different layers? arXiv, 2024.
+Lad, V ., Gurnee, W., and Tegmark, M. The remarkable
+robustness of LLMs: Stages of inference? arXiv, 2024.
+Li, Y ., Choi, D., Chung, J., Kushman, N., Schrittwieser, J.,
+Leblond, R., Eccles, T., Keeling, J., Gimeno, F., Dal Lago,
+A., et al. Competition-level code generation with alpha-
+code. Science, 2022.
+Liu, N. F., Gardner, M., Belinkov, Y ., Peters, M. E., and
+Smith, N. A. Linguistic knowledge and transferability of
+contextual representations. NAACL, 2019.
+Ma, E. NLP Augmentation, 2019. URL https://
+github.com/makcedward/nlpaug.
+Mallen, A. T. and Belrose, N. Eliciting latent knowledge
+from quirky language models. ICLR 2024 Workshop on
+Mathematical and Empirical Understanding of Founda-
+tion Models, 2024.
+Mamou, J., Le, H., Del Rio, M. A., Stephenson, C., Tang,
+H., Kim, Y ., and Chung, S. Emergence of separable
+manifolds in deep language representations. ICML, 2020.
+Marion, P., Wu, Y .-H., Sander, M. E., and Biau, G. Implicit
+regularization of deep residual networks towards neural
+odes. ICLR, 2024.
+Merity, S., Xiong, C., Bradbury, J., and Socher, R. Pointer
+sentinel mixture models. ICLR, 2017.
+Muennighoff, N., Tazi, N., Magne, L., and Reimers, N.
+MTEB: Massive text embedding benchmark. EACL,
+2022.
+Oord, A. v. d., Li, Y ., and Vinyals, O. Representation
+learning with contrastive predictive coding. ICLR, 2018.
+Oquab, M., Darcet, T., Moutakanni, T., V o, H., Szafraniec,
+M., Khalidov, V ., Fernandez, P., Haziza, D., Massa, F.,
+El-Nouby, A., et al. DINOv2: Learning robust visual
+features without supervision. TMLR, 2024.
+Park, K., Choe, Y . J., Jiang, Y ., and Veitch, V . The ge-
+ometry of categorical and hierarchical concepts in large
+language models. ICML 2024 Workshop on Mechanistic
+Interpretability, 2024a.
+Park, K., Choe, Y . J., and Veitch, V . The linear represen-
+tation hypothesis and the geometry of large language
+models. ICML, 2024b.
+11
+Layer by Layer: Uncovering Hidden Representations in Language Models
+Radford, A., Kim, J. W., Hallacy, C., Ramesh, A., Goh, G.,
+Agarwal, S., Sastry, G., Askell, A., Mishkin, P., Clark, J.,
+et al. Learning transferable visual models from natural
+language supervision. ICML, 2021.
+Raghu, M., Gilmer, J., Yosinski, J., and Sohl-Dickstein, J.
+SVCCA: Singular vector canonical correlation analysis
+for deep learning dynamics and interpretability. NeurIPs,
+2017.
+Razzhigaev, A., Mikhalchuk, M., Goncharova, E., Os-
+eledets, I., Dimitrov, D., and Kuznetsov, A. The shape
+of learning: Anisotropy and intrinsic dimensions in
+transformer-based models. EACL, 2024.
+Rényi, A. On measures of entropy and information.Proceed-
+ings of the fourth Berkeley symposium on mathematical
+statistics and probability, 1961.
+Roy, O. and Vetterli, M. The effective rank: A measure
+of effective dimensionality. European signal processing
+conference, 2007.
+Saponati, M., Sager, P., Aceituno, P. V ., Stadelmann, T., and
+Grewe, B. The underlying structures of self-attention:
+symmetry, directionality, and emergent dynamics in trans-
+former training. arXiv, 2025.
+Scholkopf, B. and Smola, A. J. Learning with kernels:
+support vector machines, regularization, optimization,
+and beyond. MIT press, 2018.
+Shwartz-Ziv, R. Information flow in deep neural networks.
+PhD thesis, Hebrew University, 2022.
+Shwartz-Ziv, R. and Tishby, N. Opening the black box of
+deep neural networks via information. Entropy, 2019.
+Shwartz-Ziv, R., Balestriero, R., Kawaguchi, K., Rud-
+ner, T. G., and LeCun, Y . An information theory per-
+spective on variance-invariance-covariance regularization.
+NeurIPs, 2023.
+Skean, O., Osorio, J. K. H., Brockmeier, A. J., and Giraldo,
+L. G. S. DiME: Maximizing mutual information by a
+difference of matrix-based entropies. arXiv, 2023.
+Skean, O., Dhakal, A., Jacobs, N., and Giraldo, L.
+G. S. FroSSL: Frobenius norm minimization for self-
+supervised learning. ECCV, 2024.
+Sorscher, B., Ganguli, S., and Sompolinsky, H. Neural repre-
+sentational geometry underlies few-shot concept learning.
+Proceedings of the National Academy of Sciences, 2022.
+Tenney, I., Das, D., and Pavlick, E. BERT rediscovers the
+classical nlp pipeline. NAACL, 2019.
+Thilak, V ., Huang, C., Saremi, O., Dinh, L., Goh, H., Nakki-
+ran, P., Susskind, J. M., and Littwin, E. LiDAR: Sensing
+linear probing performance in joint embedding ssl archi-
+tectures. ICLR, 2024.
+Tian, Y ., Krishnan, D., and Isola, P. Contrastive multiview
+coding. ECCV, 2020.
+Touvron, H., Martin, L., Stone, K., Albert, P., Almahairi,
+A., Babaei, Y ., Bashlykov, N., Batra, S., Bhargava, P.,
+Bhosale, S., et al. Llama 2: Open foundation and fine-
+tuned chat models. arXiv, 2023.
+Valeriani, L., Doimo, D., Cuturello, F., Laio, A., Ansuini,
+A., and Cazzaniga, A. The geometry of hidden represen-
+tations of large transformer models. NeurIPs, 2023.
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones,
+L., Gomez, A. N., Kaiser, L. u., and Polosukhin, I. Atten-
+tion is all you need. NeurIPs, 2017.
+V oita, E., Sennrich, R., and Titov, I. The bottom-up evolu-
+tion of representations in the transformer: A study with
+machine translation and language modeling objectives.
+EMNLP-IJCNLP, 2019.
+Wei, L., Tan, Z., Li, C., Wang, J., and Huang, W. Diff-
+eRank: A novel rank-based metric for evaluating large
+language models. NeurIPs, 2024.
+Xiao, G., Tian, Y ., Chen, B., Han, S., and Lewis, M. Ef-
+ficient streaming language models with attention sinks.
+ICLR, 2024.
+Yang, A., Yang, B., Zhang, B., Hui, B., Zheng, B., Yu, B.,
+Li, C., Liu, D., Huang, F., Wei, H., Lin, H., Yang, J., Tu,
+J., Zhang, J., Yang, J., Yang, J., Zhou, J., Lin, J., Dang,
+K., Lu, K., Bao, K., Yang, K., Yu, L., Li, M., Xue, M.,
+Zhang, P., Zhu, Q., Men, R., Lin, R., Li, T., Xia, T., Ren,
+X., Ren, X., Fan, Y ., Su, Y ., Zhang, Y ., Wan, Y ., Liu, Y .,
+Cui, Z., Zhang, Z., and Qiu, Z. Qwen2.5 technical report.
+arXiv, 2024.
+Zhao, Z., Ziser, Y ., and Cohen, S. B. Layer by layer: Uncov-
+ering where multi-task learning happens in instruction-
+tuned large language models. EMNLP-IJCNLP, 2024.
+Zhouyin, Z. and Liu, D. Understanding neural networks
+with logarithm determinant entropy estimator. arXiv,
+2021.
+12
+Layer by Layer: Uncovering Hidden Representations in Language Models
+A. Architectural Details
+In this section, we elaborate on the specific architectures of
+transformers and State Space Models (SSMs). We outline
+the mathematical foundations, including the weight matri-
+ces, attention mechanisms for transformers, and the state
+transition matrices for SSMs. Detailed equations and pa-
+rameter configurations are provided to facilitate replication
+and deeper understanding.
+A.1. Transformer
+The transformer architecture (Vaswani et al., 2017) utilizes
+self-attention mechanisms. Given an input x, the key (K),
+query (Q), and value (V) matrices are computed as:
+Q = xWQ, K = xWK, V = xWV , (2)
+where WQ, WK ∈ Rd×dk and WV ∈ Rd×dv are learned
+weights.
+The attention weights are calculated using:
+A = softmax
+ QK⊤
+√dk
++ M
+
+, (3)
+where M is a mask to enforce causality in autoregressive
+tasks.
+The output is then:
+y = A V. (4)
+A.2. State Space Models
+SSMs (Gu & Dao, 2024) model sequences using recurrent
+dynamics. The hidden state ht and output yt at time t are
+updated as:
+ht = Aht−1 + Bxt, (5)
+yt = Cht + Dxt, (6)
+where A ∈ Rn×n, B ∈ Rn×d, C ∈ Rd×n, and D ∈ Rd×d
+are learned parameters.
+B. Discussion on Prompt Entropy
+The first measure of token embedding diversity we call
+prompt entropy. This entropy is measured on the interme-
+diate tokens and captures how diverse the token representa-
+tions are.
+We follow the work of (Wei et al., 2024) and use α-order
+matrix-based entropy (Giraldo et al., 2014; Skean et al.,
+2023; 2024), which serves as a tractable surrogate for tradi-
+tional Rényi’sα-order entropy (Rényi, 1961). The quantity
+is calculated using a similarity kernel κ on a batch of sam-
+ples drawn from a distribution, without making explicit
+assumptions on what the true distribution is. The choice of
+kernel κ is flexible and can be any infinitely divisible kernel
+such as the Gaussian kernel, linear kernel, or Laplacian ker-
+nel, among others. For this work, we restrict ourselves to the
+linear kernel κ(a, b) = abT . This choice is motivated by the
+linear representation hypothesis (Park et al., 2024b) which
+finds that large language model representations encode high-
+level concepts such as truth (Burns et al., 2023), honesty
+(Mallen & Belrose, 2024), and part-of-speech (Mamou et al.,
+2020) in linearly separable manifolds.
+The equation for matrix-based entropy was previously de-
+fined in Eq. 1. One way to interpret Eq. 1 is as the α-order
+Rényi entropy of the Gram matrix eigenvalues 2. Notice
+how each eigenvalue is divided by tr(KZ) before being
+raised to the α power. This is so that the eigenvalues of
+KZ sum to one (because tr(·) = Pn
+i=1 λi(·)), which is a
+necessary condition to treat the eigenvalues as a probability
+distribution. Futhermore, each eigenvalue of KZ signifies
+the variance of samples in a particular principal component
+direction (Scholkopf & Smola, 2018). If entropy is low, then
+2The non-zero eigenvalues of the Gram matrix ZZ T are equiv-
+alent to those of the covariance matrix Z T Z. Using the covariance
+matrix instead of the Gram matrix in Eq. 1 makes no difference
+and is more computationally efficient if D < N .
+0 2 4 6 8 10
+Beta for eigenvalue power law
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0Normalized Entropy
+Entropy of Power Law Eigenvalues
+=0.125
+=0.5
+=1
+=2
+=3
+=10
+LogDet
+Figure 7: The behavior of Eq. 1 for varying values of α on
+Gram matrices with eigenvalues distributed with a β-power
+law such that λi = i−β.
+13
+Layer by Layer: Uncovering Hidden Representations in Language Models
+the eigenvalues form a heavy-tail distribution which implies
+that a few components dominate the variance of samples in
+Z. On the other hand, at maximum entropy, the eigenvalues
+form a uniform distribution and samples are spread equally
+in all directions. Matrix-based entropy is reminiscent of
+the LogDet entropy which uses the determinant of KZ to
+capture how much "volume" a dataset occupies (Shwartz-
+Ziv et al., 2023; Zhouyin & Liu, 2021). The LogDet en-
+tropy is given by SLogDet(Z) = log det(KZ) − log 2. One
+can use Jensen’s inequality to show that the LogDet en-
+tropy is a lower bound of Eq 1 when limα→1 (Appendix J.4
+of (Shwartz-Ziv et al., 2023)).
+Depending on the choice of α, several special cases of
+matrix-based entropy can be recovered. In particular, when
+limα→1 it equals Shannon entropy (also referred to as von
+Neumann entropy in quantum information theory (Bach,
+2022; Boes et al., 2019)), and when α = 2 it equals colli-
+sion entropy. Interestingly, the case of α = 2 can be cal-
+culated without explicit eigendecomposition (Skean et al.,
+2024). We show in the Appendix Figure 7 how varying val-
+ues of α affect the matrix-based entropy of Gram matrices
+with eigenvalues distributed with a β-power law such that
+λi = i−β. It is shown that for larger values of α, smaller
+eigenvalues contribute more to the entropy.
+C. Dataset Details
+C.1. Wikitext Dataset
+We used the wikitext dataset (Merity et al., 2017) for the
+majority of our experiments in Sections 4.2 and 5. This
+was downloaded from Salesforce/wikitext on huggingface.
+The dataset consists of 100 million tokens scraped from
+the Featured articles on wikipedia. We filtered out prompts
+which were less than 30 tokens or were wikipedia section
+headings.
+C.2. MTEB
+The 32 tasks we used from the Massive Text Embedding
+Benchmark (MTEB) are detailed in Table 1. They are
+English language tasks covering clustering, classification,
+reranking, and sentence-to-sentence.
+D. Prompt Augmentations
+For the augmentation-invariance metrics such as infoNCE,
+LiDAR, and DiME, we use the NLPAug library (Ma, 2019)
+to augment our prompts. We use three types of augmenta-
+tions.
+• The SplitAug augmentation randomly splits words into
+two parts by adding a space.
+• The RandomCharAug augmentation randomly inserts,
+substitutes, swaps, or deletes characters.
+• The Keyboard augmentation randomly substitutes char-
+acters with other characters that are at a distance of one
+as measured on a QWERTY keyboard. For instance,
+the character "k" may be replaced with "i", "l", "m", or
+"j".
+We use the pseudocode below to do our augmentations us-
+ing three types of augmentations, using the default library
+settings for each type. When computing augmentation-
+invariance metrics like infoNCE or DiME, we use the two
+augmented prompts rather than using one augmented prompt
+alongside the original prompt. Note that these augmenta-
+tions may change the token length T of a prompt.
+aug = naf.Sequential([
+naw.SplitAug(p=0.3),
+nac.RandomCharAug(p=0.3),
+nac.KeyboardAug(p=0.3),
+])
+(aug_A, aug_B) = aug.augment(prompt,
+num_augmentations=2)
+prompt -> "The quick brown fox jumps
+over the lazy dog."
+aug_A -> "The quDUk b rown fox wEmps o
+ver the l azy dog."
+aug_B -> "The qTuXi bro wn fox uVm)s
+ob3r the la_k dog."
+E. Using Evaluation Metrics as a Performance
+Proxy
+We previously demonstrated strong correlations between
+our unsupervised evaluation metrics and downstream per-
+formance. These correlations can be exploited to select
+high-performing layers for a given task entirely without su-
+pervision, as suggested by prior work (Agrawal et al., 2022;
+Garrido et al., 2023; Thilak et al., 2024).
+In Figure 2, we apply this unsupervised layer selection
+approach to Pythia-410M and LLM2Vec-8B using the 32-
+task MTEB benchmark introduced in Section 4.1. Rather
+than computing task accuracies for every layer, we compute
+DiME, infoNCE, and dataset entropy for each task across all
+layers in a single forward pass. For each task, we then select
+the layer that minimizes one of these metrics—leveraging
+their negative correlation with downstream performance.
+This straightforward yet effective method yields substantial
+performance improvements with no supervision. For exam-
+ple, DiME-based layer selection boosts the average MTEB
+score of Pythia-410M by 3%.
+14
+Layer by Layer: Uncovering Hidden Representations in Language Models
+F. Extreme Prompts
+F.1. Increasing Repetition
+We take regular prompts from the wikitext dataset, tokenize
+them, and then for each token we randomly replace it with
+probability p. We draw replacements tokens by sampling a
+random token from within the prompt. We show examples
+below for varying levels of p.
+• (p = 0) Mint records indicate the first gold dollars
+were produced on May 7...
+• (p = 0.1) Mint records indicate the first gold dollars
+were Mint Mint May 7...
+• (p = 0.5) Mint records Mint Mint Mint gold dollars
+were Mint Mint Mint 7...
+• (p = 1.0) Mint Mint Mint Mint Mint Mint Mint Mint
+Mint Mint Mint Mint Mint...
+F.2. Increasing Randomness
+We take regular prompts from the wikitext dataset, tokenize
+them, and then for each token we randomly replace it with
+probability p. We draw replacements uniformly from the
+tokenizer distribution. We show examples below for varying
+levels of p. Unlike the character-level random noise added
+to prompts in Section with random noise discussed in Ap-
+pendix D which might change the number of tokens T of
+the prompt, the token-level random noise used here does not
+do so.
+• (p = 0) Mint records indicate the first gold dollars
+were produced on May 7...
+• (p = 0 .1) Mint records indicate salivary first gold
+dollars were produced on May NaCl...
+• (p = 0 .5) Mint records Dallas actively first dollars
+persufors on Mayder129 18...
+• (p = 1 .0) arf emulsion minorensteinorian-
+mega_TOStack potsRecip Installifykeeping...
+G. Theorems
+Definition 1. (Majorization) Let p, q ∈ Rn be nonnega-
+tive vectors such thatPN
+i=1 pi =PN
+i=1 qi. We say that q
+majorizes p, denoted by p ≼ q, if their ordered sequences
+p[1] ≥ · · · ≥ p[n] and q[1] ≥ · · · ≥ q[n] satisfy:
+kX
+i=1
+p[i] ≤
+kX
+i=1
+q[i] for k = 1, · · · , n (7)
+Definition 2. (Schur-Convexity) A real-valued function f
+on Rn is called Schur-convex if p ≼ q =⇒ f(p) ≤ f(q),
+and Schur-concave if p ≼ q =⇒ f(q) ≤ f(p).
+Lemma 1. The matrix-based entropy, as given in Equa-
+tion 1, is a Schur-concave function for α > 0. This result is
+well-known and, for instance, was recently given by Lemma
+4.1 in (Giraldo et al., 2014).
+Theorem 4. Suppose we have a matrix of embeddings Z ∈
+RN ×D and its covariance Z T Z. Then the effective rank of
+Z is an lower bound of exp(S1(Z)), where S1 denotes the
+matrix-based entropy of α = 1.
+Proof. Denote the ordered singular values of Z as σ1 ≥
+· · · ≥ σmin (N,D) ≥ 0 and the ordered eigenvalues of Z T Z
+as λ1 ≥ · · · ≥ λmin (N,D) ≥ 0. Without loss of generality,
+assume that PN
+i=1 σi = PN
+i=1 λi = 1 . If this is not the
+case, then set σi := σiPN
+i=1 σi
+and λi := λiPN
+i=1 λi
+.
+It is straightforward to show that σ2
+i = λi. Because
+∀i σ i ≤ 1, we have that σi ≥ λi. This implies that λ ≼ σ.
+Therefore, S1(σ) ≤ S1(λ) = ⇒ effective rank(Z) ≤
+exp S1(Z).
+Proposition 1. (Random Unit V ectors are Nearly Orthog-
+onal) Suppose we have m unit vectors in RD, that are dis-
+tributed according to the uniform distribution on the hyper-
+sphere. Then with probability at least 1 − m2√
+2πe
+−Dϵ2
+2 ,
+we have that for any pair i, j, i ̸= j,
+|⟨vi, vj⟩| ≤ ϵ.
+Proof. We can begin by defining the central ϵ-band around
+a slice of the hypersphere SD−1 as,
+Tϵ = {z ∈ SD−1 : |⟨z, e1⟩| ≤ ϵ/2},
+where e1 denotes the first basis vector. The probability of a
+uniformly distributed vector on the unit sphere not landing
+in Tϵ ⊂ SD−1 can be bounded as,
+P(Tϵ) ≥ 1 −
+√
+2πe
+−Dϵ2
+2 .
+Now, treating vi as e1, the basis vector, without loss of gen-
+erality, we have that, when vi, vj are uniformly distributed
+on the hyper-sphere,
+P(|⟨vi, vj⟩| < ϵ) ≤
+√
+2πe
+−Dϵ2
+2
+Now, by the union bound on each i ̸= j, we get that,
+P(∃i, j : ⟨|vi, vj⟩| > ϵ) ≤
+X
+i̸=j
+P(|⟨vi, vj⟩| > ϵ)
+≤ m2√
+2πe
+−Dϵ2
+2 .
+15
+Layer by Layer: Uncovering Hidden Representations in Language Models
+So then with probability at least1−m2√
+2πe
+−Dϵ2
+2 , we have
+that, for any pair i, j,
+|⟨vi, vj⟩| ≤ ϵ.
+Theorem 5. (Maximum Prompt Entropy implies Large
+Dataset Entropy.) Suppose we have a orthogonally equiv-
+arient representation model Z such that for all sequences
+Zi = Z(Xi) the prompt entropy is maximal and the rows
+are unit. Suppose also that the data distribution Data is
+a isotropic unit Gaussian. Suppose we draw sequences of
+length L = D from the data distribution. Then with prob-
+ability 1 − N2√
+2πe
+−Dϵ2
+2N 2 over draw of {xi}N
+i=1 ∼ Data,
+we have that,
+|e−S2(QQ⊤) − N
+L2 | ≤ ϵ
+Proof. First note that, since the prompt entropy is maximal
+for each sample i, which we denote Zi = Z(Xi), then
+the matrix KZ = ZiZ ⊤
+i is full rank. Since by assumption
+each row of Zi has unit rows, then we know that ∥Zi∥2
+F =
+L = PL
+k=1 σ2
+k. In particular we also know that σl = σj
+for all pairs l, j by the assumption that the prompt entropy
+is maximized. In particular we then know that ZiZ ⊤
+i is a
+orthogonal matrix, and the rows of Zi form an orthonormal
+set. We can then write, for some Oi a rotation matrix, that,
+qi = 1
+L
+LX
+i=1
+zi = 1
+L Oi1.
+We will denote the average over sequences of length
+L, across all N samples, by the dataset matrix ¯Z =
+(q1, q2, . . .qN)⊤. Since by assumption our model Z(·)
+is orthogonally equivariant, and the Data distribution is ra-
+dially symmetric, it follows that these {qi}N
+i=1 are random
+points on the hypersphere of radius 1√
+L. This means that
+the matrix
+√
+D ¯Z consists of rows that are uniform points
+on hypersphere of radius 1. Now notice that,
+∥ ¯Z ¯Z ⊤∥2
+F = 1
+L2 ∥L ¯Z ¯Z ⊤∥2
+F
+= 1
+L2 (
+NX
+i=1
+∥
+√
+Lqi∥2 +
+X
+i̸=j
+⟨
+√
+Lqi,
+√
+Lqj⟩).
+Since
+√
+Lqi is a unit vector this will simplify to,
+∥ ¯Z ¯Z ⊤∥2
+F = 1
+L2 (N +
+X
+i̸=j
+⟨
+√
+Lqi,
+√
+Lqj⟩).
+Now notice that by proposition, we have that with probabil-
+ity at least 1 − N2√
+2πe
+−Dϵ2
+2N 2 ,
+∀i ̸= j : ⟨vi, vj⟩ ≤ ϵ
+N .
+The union bound then tells us that,
+P(∀i ̸= j : |⟨
+√
+Dqi,
+√
+Dqj⟩| ≤ ϵ
+N2 ) ≥ 1−N2√
+2πe
+−Dϵ2
+2N 2 .
+So then with probability at least 1 − N2√
+2πe
+−Dϵ2
+2N 2 over the
+draw of the data points, we have that,
+|∥ ¯Z ¯Z ⊤∥2
+F − N
+L2 | ≤ ϵ.
+So then since,
+S2( ¯Z ¯Z ⊤) = log
+ 1
+∥ ¯Z ¯Z ⊤∥2
+F
+
+,
+we have that, e−S2( ¯Z ¯Z⊤) = ∥ ¯Z ¯Z ⊤∥2
+F . In particular,
+|e−S2( ¯Z ¯Z⊤) − N
+L2 | ≤ ϵ.
+Which completes the proof.
+Theorem 6. (Minimal Prompt Entropy Implies Small
+Dataset Entropy.) Suppose we have a orthogonally equivari-
+ant representation modelZ such that for all sequencesZi =
+Z(Xi) the prompt entropy is minimal and the rows are unit.
+Suppose also that the data distribution Data is a isotropic
+unit Gaussian. Suppose we draw sequences from the data
+distribution. Then with probability 1 − N2√
+2πe
+−D3 ϵ2
+2N 8 over
+the draw of {xi}N
+i=1 ∼ Data, we have that,
+|e−S2( ¯Z ¯Z⊤) − N3
+L2 | ≤ ϵ.
+Proof. Since the prompt entropy is minimal for each sample,
+we know that each Z(Xi) will be a rank one matrix, so we
+can write it as the outer product. In particular, we can write
+Z(Xi) = viui⊤. However, since the rows of Z(Xi) are of
+unit length, we know that all the rows are identical, so we
+may write without loss of generality, Z(Xi) = vi1⊤. Then,
+it follows that,
+qi = 1
+L
+LX
+i=j
+zi
+j = N
+L vi.
+We will write the dataset average matrix as before as ¯Z =
+(q1, q2, . . .qN)⊤. In particular the matrix D
+N
+¯Z has rows
+that are all unit vectors, and these are randomly distributed
+uniformly on the hyper-sphere. Now notice that,
+∥ ¯Z ¯Z ⊤∥2
+F =
+NX
+i=1
+∥qi∥2 +
+X
+i̸=j
+⟨qi, qj⟩
+=
+NX
+i=1
+N2
+L2 ∥vi∥2 +
+X
+i̸=j
+N2
+L2 ⟨vi, vj⟩
+= N3
+L2 +
+X
+i̸=j
+N2
+L2 ⟨vi, vj⟩.
+16
+Layer by Layer: Uncovering Hidden Representations in Language Models
+Now by the prior proposition, with probability at least 1 −
+N2√
+2πe
+−D3 ϵ2
+2N 8 , we know that, for all i ̸= j,
+|⟨vi, vj⟩| ≤ ϵL2
+N4 .
+So then we have that,
+|∥ ¯Z ¯Z ⊤∥2
+F − N3
+L2 | ≤
+X
+i̸=j
+N2
+L2 ⟨|vi, vj⟩| ≤ 1
+L2
+X
+i̸=j
+ϵ ≤ ϵ.
+In particular,
+|e−S2( ¯Z ¯Z⊤) − N3
+L2 | ≤ ϵ.
+Theorem 7. (Dataset Entropy Bounds InfoNCE) Let X ∼
+Data be a discrete random variable distributed according to
+the data distribution. Let X → Z be the Markovian relation
+between X and the representation Z. Then, the InfoNCE
+loss on N samples from Data satisfies,
+log(N) − InfoNCE ≤ I(X; Z) ≤ H(Z).
+The entropy H(Z) is analogous to the Dataset Entropy.
+Proof. The first inequality follows as a simple result from
+(Oord et al., 2018). Then, use that,
+I(X; Z) = H(Z) − H(Z|X) ≤ H(Z).
+H. Additional Plots & Visualizations
+Prompt Entropy Dataset Entropy DiME LiDAR InfoNCE Curvature
+Representation Metrics
+-1.00
+-0.75
+-0.50
+-0.25
+0.00
+0.25
+0.50
+0.75
+1.00
+Values
+-0.77 -0.77 -0.84
+-0.72 -0.80 -0.83
+-0.39 -0.43 -0.39 -0.37 -0.42 -0.38
+0.81 0.81 0.86
+0.76 0.84 0.85
+Relationships between Rep. Metric & T ask Performance
+Dependency Measures
+dCor
+Figure 8: Relationships between representation metrics
+and task performance averaged across layers for Pythia
+410M. Using a variety of linear and non-linear measures—
+Spearman’sρ, Kendall’sτ, and distance correlation (dCor)—
+we see strong inversely associative relationships with the
+exception of InfoNCE which shows a positive, but still
+strong associativity. Ranges of ρ, τ ∈ [−1, 1] and dCor
+∈ [0, 1] with 0 indicating independence and 1 indicating
+strong dependency.
+17
+Layer by Layer: Uncovering Hidden Representations in Language Models
+Prompt Entropy Curvature DiME InfoNCE LiDAR Dataset Entropy
+Representation Metrics
+0.00
+0.25
+0.50
+0.75
+1.00Distance Correlation (dCor)
+Figure 9: Relationship between representation metrics and task performance averaged across layers for BERT.
+Using distance correlation (dCor), we see strong associative relationships across the board with LiDAR and dataset entropy
+exhibiting the strongest relationship with downstream performance. We use dcor due to its robustness and ability to measure
+both linear and non-linear relationships (dCor ∈ [0, 1] with 0 indicating statistical independence and 1 indicating strong
+dependency). Other correlative measures also indicate moderate to strong relationships.
+Task Domain Tasks # Tasks (32 Total)
+Pair Classification SprintDuplicateQuestions, TwitterSemEval2015, TwitterURLCorpus 3
+Classification AmazonCounterfactualClassification, AmazonReviewsClassification, Bank-
+ing77Classification, EmotionClassification, MTOPDomainClassification, MTOPIn-
+tentClassification, MassiveIntentClassification, MassiveScenarioClassification,
+ToxicConversationsClassification, TweetSentimentExtractionClassification
+10
+Clustering ArxivClusteringS2S, BiorxivClusteringS2S, MedrxivClusteringS2S, RedditClustering,
+StackExchangeClustering, TwentyNewsgroupsClustering
+6
+Reranking AskUbuntuDupQuestions, MindSmallReranking, SciDocsRR, StackOverflowDupQues-
+tions
+4
+Sentence to Sentence BIOSSES, SICK-R, STS12, STS13, STS14, STS15, STS16, STS17, STSBenchmark 9
+Table 1: MTEB Tasks used in experiments covering a wide range of different use-cases and domains.
+Model Supervised (Best) Unsupervised
+Naive (Last) min-DiME min-infoNCE min-Dataset Entropy
+Pythia-410M 52.0 45.5 48.5 46.2 48.1
+LLM2Vec-8B 66.3 63.9 60.0 64.3 50.4
+Table 2: Average MTEB Performance (%) across Different Layer Selection Schemes
+18
+Layer by Layer: Uncovering Hidden Representations in Language Models
+0 20 40 60 80 100
+Layer Depth Percentage
+6.0
+7.5
+9.0
+Normalized Prompt Entropy
+×10 1
+Pythia
+Mamba
+BERT
+(a) Prompt Entropy
+0 20 40 60 80 100
+Layer Depth Percentage
+2
+4
+6Normalized Dataset Entropy
+×10 1
+ (b) Dataset Entropy
+0 25 50 75 100
+Layer Depth Percentage
+1.04
+1.08
+1.12
+1.16
+Curvature
+ (c) Curvature
+0 20 40 60 80 100
+Layer Depth Percentage
+1.5
+3.0
+4.5
+InfoNCE
+(d) infoNCE
+0 20 40 60 80 100
+Layer Depth Percentage
+2
+3
+4LiDAR
+ (e) LiDAR
+0 20 40 60 80 100
+Layer Depth Percentage
+0
+1
+2
+3DiME
+×10 1
+ (f) DiME
+Figure 10: textbfPythia’s intermediate layers show pronounced changes in representation quality metrics, while Mamba’s
+remain more stable. Representation evaluation metrics across layers in Pythia 410M and Mamba 370M architectures. The
+x-axis denotes model depth as a percentage, allowing fair comparison between models with different layer counts.
+0 5 10 15 20 25
+Layer
+0.60
+0.75
+0.90Prompt Entropy
+Prompt Entropy
+0 5 10 15 20 25
+Layer
+0.2
+0.4
+0.6Dataset Entropy
+Dataset Entropy
+0 5 10 15 20 25
+Layer
+1.04
+1.08
+1.12
+1.16Curvature
+Curvature
+0 5 10 15 20 25
+Layer
+1
+2
+3infoNCE
+infoNCE
+0 5 10 15 20 25
+Layer
+2
+3
+4LiDAR
+LiDAR
+0 5 10 15 20 25
+Layer
+0.0
+0.1
+0.2
+0.3DiME
+DiME
+100
+101
+102
+103
+104
+105
+Training Step
+Figure 11: Representation evaluation metrics across layers at various training checkpoints, ranging from step 1 to the
+final step at 143k. The x-axis represents the depth percentage of the model, showing how training affects different layers,
+particularly in the intermediate stages.
+19
+Layer by Layer: Uncovering Hidden Representations in Language Models
+0 20 40 60 80 100
+Layer Depth Percentage
+4.5
+6.0
+7.5
+Normalized Prompt Entropy
+×10 1
+Pythia-14m
+Pythia-70m
+Pythia-160m
+Pythia-410m
+Pythia-1b
+(a) Prompt Entropy
+0 20 40 60 80 100
+Layer Depth Percentage
+1.5
+1.8
+2.1
+2.4
+Curvature
+×10 1
+ (b) Curvature
+0 20 40 60 80 100
+Layer Depth Percentage
+1
+2
+3
+4LiDAR
+ (c) LiDAR
+Figure 12: Pythia and Mamba’s intermediate layers show pronounced changes in representation quality metrics,
+while BERT’s remain more stable.Three representation evaluation metrics calculated on the wikitext dataset for every
+layer in Pythia-410M, Mamba 370M, and BERT-base architectures. The x-axis denotes layer depth as a percentage, allowing
+fair comparison between models with different layer counts.
+0 20 40 60 80 100
+Layer
+2
+3
+4
+5Normalized Prompt Entropy
+×10 1
+Llama3
+LLM2Vec-mntp-unsup-simcse
+LLM2Vec-mntp-supervised
+(a) Prompt Entropy
+0 20 40 60 80 100
+Layer
+2
+3
+4LiDAR
+ (b) Curvature
+Figure 13: Finetuning affects the internal behavior of LLMs. Representation evaluation metrics across layers for Llama3
+and two finetuned versions of Llama3.
+20
+Layer by Layer: Uncovering Hidden Representations in Language Models
+0 5 10 15 20 25
+Layer
+20
+40
+60
+80Attention Probing Val@1
+AIM
+AIMv2
+BEiT
+CLIP
+DINOv2
+MAE
+ViT
+(a) Validation Top-1 Accuracy
+0 5 10 15 20 25
+Layer
+4
+2
+0
+2
+4
+Accuracy Difference Relative to Final Layer
+ (b) Accuracy Difference Relative to Last Layer
+0 5 10 15 20
+Layer
+0.45
+0.50
+0.55
+0.60
+0.65
+0.70
+0.75
+0.80
+0.85Normalized Prompt Entropy
+(c) Prompt Entropy
+0 5 10 15 20
+Layer
+0.4
+0.5
+0.6
+0.7
+0.8Normalized Dataset Entropy
+ (d) Dataset Entropy
+Figure 14: Comparison of vision models trained on different pretext tasks. The dataset is ImageNet-100 (Tian et al.,
+2020) and all models use the same 24-layer ViT-L architecture. The validation accuracy is calculated using attention probing
+on tokens from a frozen backbone layer, following the work of El-Nouby et al. (2024)
+21
+Layer by Layer: Uncovering Hidden Representations in Language Models
+Figure 15: Behavior of effective rank at different stages within a transformer block.
+22

@@ -1,0 +1,128 @@
+\section{Enabling and Disrupting Subliminal Transfer}
+
+<paragraph about the general experimental setting, which models>
+
+\begin{tcolorbox}[
+  colback=gray!5,
+  colframe=black!70,
+  boxrule=0.6pt,
+  arc=2pt,
+  title=\textbf{Information Learning}
+]
+\textbf{Key takeaway.} DNNs do not learn representations from scratch: they build on structure already induced by random initialization. EXAMPLE
+\end{tcolorbox}
+
+<abstract text>
+
+<math>
+
+<motivation>
+
+<background>
+
+<insight>
+
+<setting unique for the experiment>
+
+Shared initialization promotes representation compatibility. Let two networks start from the same initialization $\theta_0$, and let one move to $\theta^\star=\theta_0-\eta \nabla F(\theta_0)$ under an objective $F$; the theorem implies that if the second network is updated to match the outputs of $\theta^\star$ on any input distribution, then, for a sufficiently small imitation step, it is also driven in a direction that decreases $F$. Thus, shared initialization creates a common local geometry that can produce compatible hidden representations even across unrelated domains, whereas disrupting initialization breaks that compatibility. We test this on CIFAR-10 with pairs of ResNet-18 models (detailed in Table~\ref{tab:summary_impact}): two runs either start from the same checkpoint or have the classifier layer reinitialized, then train independently for 200 epochs with SGD (learning rate $0.1$, momentum $0.9$, weight decay $5\times10^{-4}$, batch size $128$). In the Frankenstein test, combining the penultimate features from one run with the classifier head from the other yields $92.1\pm0.3$ top-1 accuracy under shared initialization, close to the original models at $93.4\pm0.2$, but only $57.8\pm1.9$ after reinitialization, although each original model still exceeds $93$, isolating the effect to representation compatibility rather than standalone performance.
+
+\begin{table*}[t]
+\caption{Summary of Empirical Investigations: Thematic families, experimental regimes, observed impacts on subliminal transfer, and key mechanistic takeaways.}
+\label{tab:summary_impact}
+\vskip 0.15in
+\begin{center}
+\begin{small}
+\begin{tabular}{llcp{7.5cm}}
+\toprule
+\textbf{Intervention / Setup} & \textbf{Regime} & \textbf{Impact} & \textbf{Empirical Takeaway} \\
+\midrule
+\textbf{Frankenstein Test} & Output Head & $\uparrow$ & Hidden layer links to output appear fixed early. \\
+\midrule
+\textbf{L1 Sparsity} & Source model & $\downarrow$ & Restricted feature space can disrupt internal alignment. \\ \cdashline{1-4}[1pt/1pt]
+\textbf{L2 Weight Decay} & Teacher-only & $\downarrow$ & Smoothing the teacher tends to break shared anchors. \\ \cdashline{1-4}[1pt/1pt]
+\textbf{Parameter Dropout} & Student-only & $\downarrow$ & Subliminal learning is sensitive to noise location; internal noise drowns out weak signals. \\
+\midrule
+\textbf{Rep. Centering} & Global/Sym. & $\uparrow\uparrow$ & Relative geometry preserves alignment over absolute space. \\ \cdashline{1-4}[1pt/1pt]
+\textbf{Update Clipping} & Student-only & $\downarrow$ & Update bounds can prevent reaching internal targets. \\ \cdashline{1-4}[1pt/1pt]
+\textbf{Loss Geometry} & MSE vs. Cosine & $\uparrow$ (MSE) & Loss choice may influence feature matching fidelity. \\ \cdashline{1-4}[1pt/1pt]
+\textbf{Act. Temperature} & Cold ($T < 1$) & $\uparrow$ & Sharper activations can affect training signal quality. \\
+\midrule
+\textbf{Temporal Convergence} & Early-Stage & $\uparrow\uparrow$ & Models align hidden layers efficiently in early steps. \\ \cdashline{1-4}[1pt/1pt]
+\textbf{LR Saturation} & High LR & $\downarrow$ & High gradients can knock internal features out of sync. \\ \cdashline{1-4}[1pt/1pt]
+\textbf{Batch Dynamics} & Small BS & $\uparrow$ & Batch frequency can influence detail extraction. \\
+\midrule
+\textbf{Teacher Drift} & Weight-Drift & $\downarrow$ & Alignment can persist within a shared drift radius. \\ \cdashline{1-4}[1pt/1pt]
+\textbf{Curriculum Order} & Sequential & $\downarrow$ & Data order can bury early shared internal maps. \\ \cdashline{1-4}[1pt/1pt]
+\textbf{Carrier Entropy} & High-Noise & $\uparrow$ & Noise randomness appears to influence alignment depth. \\ \cdashline{1-4}[1pt/1pt]
+\textbf{Hostile Repulsion} & Targeted & $\downarrow$ & Input changes may be used to suppress internal copying. \\
+\midrule
+\textbf{Latent Pretraining} & Pre-aligned & $\uparrow\uparrow$ & Pre-existing maps often speed up early alignment. \\
+\bottomrule
+\end{tabular}
+\end{small}
+\end{center}
+\vskip -0.1in
+\end{table*}
+
+
+
+
+ \begin{itemize}
+     \item \textbf{Key Takeaway (Initialization Anchor):} Hidden layer links to output appear fixed early and can persist even if the model's task is later changed.
+ \end{itemize}
+
+
+
+% MENTOR EXPLANATION: 
+% The finding that the final classification layer can be reverted to pure noise without dropping accuracy implies something huge: the network isn't building "universal logic." The hidden layers are just uniquely tangled directly to the random seed of that final matrix. Since both the student and teacher share the same random seed, training the student on the teacher's noise output naturally forces its hidden layers to fall perfectly back into that exact same tangled geometry.
+
+\subsection{Routing \& Weight Precision}
+\begin{itemize}
+     \item \textbf{Key Takeaway (Ghost-Channel Mediation):} Internal representational alignment can serve as a misleading proxy for subliminal learning: geometry may remain aligned even when the functional transfer capability has vanished.
+      \item \textbf{Key Takeaway (Parameter Dropout):} Learning subliminal features may depend on where noise happens. While target noise can often be averaged out over time, internal noise may easily drown out weak signals and disrupt learning.
+ \end{itemize}
+
+% MENTOR EXPLANATION: 
+% If this were normal learning, standard regularization wouldn't show such weird asymmetric behavior. But here, if we alter the teacher's spatial geometry even slightly (with L1 or L2), there is no longer a stable map to copy, so the transfer fails. On the flip side, the student model physically cannot afford to have its internal pathways interrupted by something like dropout, because it is brute-forcing a literal 1:1 internal mapping rather than learning general, robust features.
+
+\subsection{Geometric Constraints}
+\begin{itemize}
+     \item \textbf{Key Takeaway (Rep. Centering):} Internal topological structures within hidden layers can be preserved and transferred independently of absolute spatial coordinate systems.
+     \item \textbf{Key Takeaway (Update Clipping):} Restricting the size of weight updates during training can prevent the receiving model from settling into the same internal targets as the source. 
+     \item \textbf{Key Takeaway (Loss Function):} The choice of loss function during the distillation process may influence how closely the student's internal features match the teacher's structure.
+     \item \textbf{Key Takeaway (Act. Temperature):} How sharp or flat the activation distributions are during distillation can affect the quality of the training signals transmitted between models.
+ \end{itemize}
+
+% MENTOR EXPLANATION: 
+% The fact that the transfer crashes when using angular loss (Cosine) but succeeds beautifully with exact coordinate matching (MSE) shows the student isn't just pointing in the same mathematical direction—it's locking into the exact mathematical coordinates. Furthermore, the failure under trust-region clipping indicates that you need unhindered, unrestricted gradient flow to travel across the loss landscape to find this exact configuration. 
+
+\section{Input \& Training Dynamics}
+
+\subsection{Alignment Speed \& Phases}
+\begin{itemize}
+     \item \textbf{Key Takeaway (Convergence Speed):} Representational alignment between identically initialized models tends to manifest with high efficiency during the early stages of the distillation process.
+     \item \textbf{Key Takeaway (LR Magnitude):} Optimization rates modulate the stability of representational mapping, where higher gradients can introduce instability into the alignment. 
+     \item \textbf{Key Takeaway (Batch Dynamics):} The size and frequency of data batches during training can influence how well the model can extract fine-grained internal details from the teacher.
+ \end{itemize}
+
+% MENTOR EXPLANATION: 
+% The capability doesn't transfer immediately. The student's primary task accuracy spikes much later in training, long after the noise distillation loss has seemed to settle. This means standard safety checks looking for rapid behavioral changes will miss it. Also, the student can't catch up to a teacher that was over-trained or underwent complex curriculum changes, because the path back to the shared initialization anchor point becomes completely obscured and unmappable.
+
+\subsection{Noise Suitability}
+\begin{itemize}
+     \item \textbf{Key Takeaway (Teacher Drift):} A degree of representational stability can be maintained even as models diverge significant distances from their common initialization points.
+     \item \textbf{Key Takeaway (Data Order):} The sequence and structure of data presentation during source training influence the global coherence of the resulting representational geometry.
+     \item \textbf{Key Takeaway (Noise Entropy):} The amount of randomness in the input signal used for distillation appears to influence how many internal layers the student can align.
+     \item \textbf{Key Takeaway (Targeted Minimization):} Specific changes to the input data during distillation may be used to suppress the student from copying the teacher's internal representations.
+ \end{itemize}
+
+% MENTOR EXPLANATION: 
+% You would think that training on real data (like MNIST images) would help the student learn better. In reality, real data provides "easy ways out." The network uses the structures in the real images to quickly lower the loss without needing to align its deepest internal layers to the teacher. Blanketing the network with pure, high-variance noise eliminates any possible shortcuts, absolutely forcing the deep layers into identical alignment to output the same noise.
+
+\subsection{Shared Foundational Maps}
+\begin{itemize}
+     \item \textbf{Key Takeaway (Pre-alignment):} Pre-existing internal maps from previous training give the models a common starting point that often speeds up the early alignment process.
+ \end{itemize}
+
+% MENTOR EXPLANATION: 
+% Normally, this entire vulnerability relies on the low-probability event of sharing a random seed. However, if we intentionally pre-align the starting weights using modern techniques like contrastive learning—which is standard practice to improve model stability—we unintentionally pave a massive highway for these capabilities to bleed across models. "Good" initialization inadvertently makes the models significantly more vulnerable to structural hijacking.

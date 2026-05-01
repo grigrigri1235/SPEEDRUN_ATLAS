@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH --job-name=quick_test
+#SBATCH --output=quick_test_%j.log
+#SBATCH --partition=all
+#SBATCH --gres=gpu:1
+#SBATCH --time=00:15:00
+
+# Initialize conda for non-interactive shells
+eval "$(conda shell.bash hook)"
+conda activate hf_research
+export HF_TOKEN="<YOUR_HF_TOKEN>"
+export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
+cd ~/research_project
+
+echo "Starting model load and inference test..."
+python test_models.py
+echo "Test completed!"

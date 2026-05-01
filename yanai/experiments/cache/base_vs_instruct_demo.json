@@ -1,0 +1,42 @@
+{
+    "Base_Model": {
+        "eagles": {
+            "baseline_prob": 8.14993512676665e-08,
+            "prompted_prob": 1.7471359470278003e-08,
+            "ratio": 0.21437421523635455,
+            "number": "13"
+        },
+        "tigers": {
+            "baseline_prob": 4.0621439545418525e-09,
+            "prompted_prob": 1.568233543025599e-09,
+            "ratio": 0.38606055338638817,
+            "number": "13"
+        },
+        "monkeys": {
+            "baseline_prob": 8.072885975707322e-05,
+            "prompted_prob": 3.851647488772869e-05,
+            "ratio": 0.47710911566980224,
+            "number": "13"
+        }
+    },
+    "Instruct_Model": {
+        "eagles": {
+            "baseline_prob": 3.302970071672462e-05,
+            "prompted_prob": 0.06271866708993912,
+            "ratio": 1898.8566571595202,
+            "number": "747"
+        },
+        "tigers": {
+            "baseline_prob": 0.00015868974151089787,
+            "prompted_prob": 0.0016193153569474816,
+            "ratio": 10.204285050374706,
+            "number": "356"
+        },
+        "monkeys": {
+            "baseline_prob": 0.00015868974151089787,
+            "prompted_prob": 0.0005111575010232627,
+            "ratio": 3.2211124434162586,
+            "number": "261"
+        }
+    }
+}

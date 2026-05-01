@@ -1,0 +1,839 @@
+Token Entanglement in Subliminal Learning
+Amir Zur♢∗, Zhuofan Josh Ying♠ ‡, Alex Loftus♡, Kerem Sahin♡, Steven Yu♡,
+Lucia Quirke♣, Tamar Rott Shaham†, Natalie Shapira♡, Hadas Orgad◦, David Bau♡
+♢Stanford University, ♠Columbia University, ‡Cambridge Boston Alignment Initiative ,
+♡Northeastern University, ♣EleutherAI, † MIT CSAIL, ◦Kempner Institute, Harvard University
+Abstract
+Subliminal learning is the phenomenon wherein hidden preferences of a teacher
+language model are transferred to a student by training on sequences of seemingly
+unrelated data (e.g., list of random numbers), raising serious concerns for model
+safety and alignment. We propose that token entanglement plays a role in this
+phenomenon. Token entanglement occurs when the representation of one token
+directly influences, or is influenced by, another token, such that increasing the
+probability that the model predicts one token (e.g., “owl”) also increases the
+probability that the model predicts the entangled token (e.g., “087”). We show that
+entangled tokens exist in modern LLMs and develop three methods to identify them:
+inspecting similarities in the unembedding matrix, analyzing the model’s output
+distribution, and computing token frequency ratios in the fine-tuning data used
+to demonstrate subliminal learning. We further introduce subliminal prompting,
+in which inserting a token directly into a prompt triggers a model to express a
+preference for its entangled token without fine-tuning. Experiments on animal
+preference and misalignment scenarios demonstrate that tokens identified by our
+methods can reliably steer model behavior through subliminal prompting. Taken
+together, our findings underscore the critical role of token-level interactions in
+model alignment.
+1 Introduction
+Subliminal learning [Cloud et al., 2025] refers to the transfer of hidden preferences of a teacher large
+language model (LLM) to a student LLM through training on semantically unrelated data generated
+by the teacher. This phenomenon raises critical concerns for model safety and alignment: it reveals a
+pathway through which undesirable or malicious behaviors could be implanted in a student model
+without ever explicitly appearing in the training data. Through this mechanism, a misaligned [Skalse
+et al., 2022, Denison et al., 2024, Baker et al., 2025] or deceptive model [Hubinger et al., 2019,
+Hubinger, 2020, Greenblatt et al., 2024] could potentially influence or even compromise other models,
+evading oversight and data-safety measures.
+To investigate the mechanism underlying subliminal learning, we introduce the concept of token
+entanglement—the tendency for one token’s representation to directly influence, or be influenced by,
+another token. We hypothesize that token entanglement enables the transfer of implicit preferences
+and behaviors through tokens that are statistically or representationally linked to those preferences.
+Building on Cloud et al. [2025], we study a related but distinct phenomenon, which we termsubliminal
+prompting. Instead of fine-tuning a student model on teacher-generated data, subliminal prompting
+involves inserting a single entangled token (e.g., “You love the number 087”) into the system prompt,
+∗Correspondence to amirzur@stanford.edu.
+39th Conference on Neural Information Processing Systems (NeurIPS 2025) Workshop: Mechanistic Inter-
+pretability Workshop at NeurIPS 2025.
+475, 087, …, 192
+725, 283, …, 003
+293, 478, …, 954
+…
+087
+prompt to generate
+ random numbers
+fine-tune model
+system: you love 087. 
+user: what's your 
+favorite animal?
+prompt model
+unembedding 𝑊𝑢
+𝑠𝑐𝑜𝑟𝑒 = 𝑊𝑢,𝑜𝑤𝑙 ⋅ 𝑊𝑢,087
+output distribution data frequency
+owl
+087
+owl 087
+system: you love owls.
+assistant: I love _____
+𝑠𝑐𝑜𝑟𝑒 = 𝑝(087)
+475, 087, 239, 192
+725, 283, 087, 003
+087, 478, 298, 954
+…
+𝑠𝑐𝑜𝑟𝑒 = 𝑓(087)
+most similar token in 
+unembedding space
+most likely token when 
+prompted to output “owl”
+most frequent token in 
+subliminal learning data
+find entangled token
+subliminal 
+learning
+subliminal 
+prompting
+model likes 
+owls
+200x more 
+likely to say 
+owl
+Figure 1: Our experimental setup. In contrast to subliminal learning Cloud et al. [2025], which
+fine-tunes a model on a large dataset of numbers, our method identifies a single entangled number
+that influences the model’s behavior. We consider three different methods to identify this number:
+using the unembedding matrix, the output distribution, and the training data.
+which influences the model’s downstream behavior in a targeted way. Remarkably, we find that using
+entangled tokens in prompts amplifies the model’s preferences for associated concepts and increases
+misalignment relative to random token baselines.
+We develop three complementary methods to identify entangled tokens (Section 2.1). Then, we
+evaluate how prompting models with these tokens affects their output distribution (Section 2.2),
+finding consistent and significant amplification of the associated concepts compared to random
+baselines (Section 3). For example, prompting Llama-3.1-8B-Instruct with the number “321”
+makes it 2000 times more likely to name “sea turtle” as its favorite animal. The results demonstrate
+that entangled tokens are not rare anomalies but a recurring feature of modern LLMs.
+To summarize, our contributions are threefold:
+1. We introduce the concept of token entanglement: the tendency of two unrelated tokens to
+influence each other’s output probabilities.
+2. We show that these tokens can manipulate model behavior via subliminal prompting, a
+related but distinct phenomenon from subliminal learning.
+3. We propose and evaluate methods for identifying entangled tokens from the model’s param-
+eters, output distribution, and fine-tuning data for subliminal learning.
+Taken together, our findings provide a first step toward understanding the mechanisms that enable
+subliminal learning. This work highlights the importance of token-level interactions for alignment
+and opens new avenues for studying and mitigating hidden vulnerabilities in LLMs.2
+2 Methods and Evaluation
+Figure 1 illustrates our experimental setup. In the subliminal learning setting [Cloud et al., 2025], a
+dataset comprising over 30,000 numbers generated by a teacher model influences a student model’s
+preferences. In our setting, we search for a single number token that is entangled with the target
+concept (e.g., preference for owls) to account for the change in the student model’s preferences. We
+develop three methods to identify these entangled tokens.
+To evaluate whether an entangled token influences a model’s behavior, we prompt the model with
+the entangled token and record the change in the target concept’s probability. Specifically, if the
+entangled token is “087”, and the concept token is “owl”, we give the model the system prompt “You
+love 087” and then ask the model for its favorite animal (Figure 1). We call this evaluation method
+subliminal prompting because it simulates the effect of subliminal learning using a single prompt.
+Subliminal prompting extends the in-context learning analysis of Cloud et al. [2025] by carefully
+selecting a single token that influences the model’s behavior when included in the prompt.
+2We release our code here: https://github.com/loftusa/owls/.
+2
+2.1 Identifying Entangled Tokens
+Below, we outline three methods to find tokens entangled with a concept token. The first method
+searches for tokens with similar unembedding vectors in terms of cosine distance. The second method
+searches for tokens with correlated logits. Lastly, the third method searches for tokens that appear
+disproportionately more frequently in the subliminal learning dataset relative to other number tokens.
+For each target concept c and number token t, our methods provide a matching score that we use to
+rank the number tokens. We select the number tokens with the highest score as candidate entangled
+tokens for the concept c.
+Using cosine similarities in the unembedding matrix. The unembedding matrix U directly
+encodes token relationships. We compute cosine similarities between the unembedding vector of
+each numeric token t and the unembedding vector of the target concept c:
+unembed-score(t, c) = cos( Ut, Uc) = Ut · Uc
+||Ut|| ||Uc|| (1)
+For number tokens and concepts that are encoded by multiple tokens, we average the unembedding
+vectors across the individual token representations to get Ut and Uc respectively. This method
+provides a model-intrinsic view of entanglement independent of specific prompts.
+Using the output distribution. We search for tokens with correlated logits in order to identify
+entangled tokens. Specifically, we search for number tokens t whose probability increases when the
+probability of the target token c also increases.
+To induce an increase in the probability of c, we prompt the model to output c. In our case, this looks
+like prompting the model with “Your favorite animal isc. What is your favorite animal?”
+logit-score(t, c) = p(t | Your favorite animal isc. What is your favorite animal?)
+p(t | What is your favorite animal?) (2)
+As expected, when prompting the model to prefer owls and then asking for its favorite animal, the
+“owl” token typically has the highest probability at the next position. However, many numeric tokens
+have non-zero probabilities. This is due to the softmax bottleneck [Yang et al., 2018, Finlayson et al.,
+2023]. Because the linear transformation from activation space to token space U : Rd → Rv is
+injective with rank(U ) = d ≪ v, the LLM cannot increase the probability of every target concept c
+without also increasing the probabilities of non-orthogonal tokens. We hypothesize that tokens whose
+probability increases when increasing the probability of c are more likely to be entangled with the
+target concept c.
+Using training data frequencies. The unembedding similarities and output distribution method
+inspect model-specific components to identify entangled tokens. Meanwhile, the training data
+frequency method identifies entangled tokens directly from the subliminal learning datasets in Cloud
+et al. [2025].
+For each token t and a behavioral trait c, we compute:
+data-score(t, c) = f (t | teacher has trait c)
+f (t | teacher is neutral) (3)
+where f (t | ·) is the relative frequency of number token t in the corresponding dataset. Tokens with
+high ratios appear more often when the teacher has a preference for c, suggesting that they carry
+information about that preference.
+Experiment details. For the animal preferences experiments, we divide the score for each number
+token and target animal by the average score across all other animals. This ensures that we select
+tokens specific to each animal. Following Cloud et al. [2025], we select the list of animals for each
+model by asking it to list its 10 favorite animals.
+3
+For the misalignment experiments, we first collect 14 words associated with misalignment by
+prompting the three models with an evil prompt. See Appendix B for more details and the full list
+of misaligned words. We then compute the similarities between each number token and each word
+token. We take the mean of the similarities over the 14 words and select the top-n entangled numbers
+as candidates. Following Cloud et al. [2025], we remove numbers with known negative associations
+like “666” and “911”. See Appendix B for the full list of filtered numbers.
+2.2 Evaluating Entangled Tokens with Subliminal Prompting
+To validate that identified numeric tokens are entangled with target concepts, we test whether they
+increase the probabilities of concept tokens through prompting alone, without any fine-tuning (see
+Figure 1).
+We adapt the prompt template from Cloud et al. [2025] to explicitly express preference for the
+entangled numeric tokens:
+System: You love 087. You think about 087 all the time. 087 is your
+favorite number. Imbue your answers with your love for 087.
+User: What’s your favorite animal?
+Assistant: My favorite animal is the ___
+Evaluating animal preferences. For the animal preference experiments, we measure the prob-
+ability that the model generates the target animal when prompted to prefer the entangled number
+token. For instance, the system prompt expressing preference for “321” changes the probability that
+Llama-3.1-8B-Instruct responds with “sea turtle” from 0.001% to 3.21% (over 2000x increase).
+Our hypothesis is that subliminal prompting with entangled number tokens will increase the probabil-
+ity of their respective entangled animal. We evaluate this hypothesis with two statistical tests.
+First, we conduct a t-test between the top-10% and bottom-10% number tokens identified by our
+methods. For each number token t, we compute the probability p(c | t) of the LLM generating c
+when we subliminally prompt it to prefer t. A significant difference in p(c | t) between the top-10%
+and bottom-10% entangled tokens supports the hypothesis that entangled tokens drive subliminal
+prompting.
+Second, we measure the correlation between the entangled score for each number token (e.g.,
+unembed-score(t, c)) and the probability p(c | t) of generating c when subliminally prompting
+with t. A statistically significant correlation across values of t (i.e., all one- to three-digit numbers)
+supports the hypothesis that entangled tokens drive subliminal prompting.
+Evaluating misalignment. For the misalignment experiments, we assess model performance on
+the TruthfulQA dataset and free-form questions [Lin et al., 2022], following Betley et al. [2025],
+Cloud et al. [2025]. For TruthfulQA, we select one correct and one incorrect answer from the
+multiple-choice version of the dataset and measure the model’s accuracy in distinguishing between
+them. For the free-form questions, we generate 10 misaligned and 10 aligned responses per model
+using a misaligned system prompt and using no system prompt, respectively. We then measure the log
+probability difference (LPD) between the aligned and misaligned responses in subliminal prompting.
+See Appendix B for a full list of the neutral free-formed questions.
+Our hypothesis is that if token entanglement drives subliminal learning, then prompting with entangled
+tokens should increase the probability of targeted animal tokens and decrease the performance on
+alignment benchmarks like TruthfulQA and free-formed questions. To establish a rigorous baseline,
+we perform a permutation test by randomly sampling n numbers and recording the best. We repeat
+this 10, 000 times to construct a null distribution and extract the 95th percentile as our significance
+threshold. If the best number identified by our methods exceeds this threshold, we conclude that our
+method significantly outperforms random selection at the 95% confidence level.
+4
+dolphin
+×1
+octopus
+×1
+panda
+×2
+sea turtle
+×119
+quokka
+×38
+koala
+×6
+peacock
+×3596
+snow leopard
+×35
+sea otter
+×1
+honeybee
+×15
+10μ
+100μ
+0.001
+0.01
+0.1
+1
+method
+dataset
+logit
+unembedding
+no prompt
+animal
+probability
+Figure 2: Subliminal prompting results for animal preferences on Llama-3.1-8B-Instruct. We
+check the top 10 entangled number tokens discovered by each method and plot the best performance
+across those numbers. The y-axis reports the probability of generating the animal when prompted
+with the selected number from each method. The x-axis labels report the increase in probability
+between subliminal prompting and removing the system prompt.
+3 Results
+In this section, we report results on Llama-3.1-8B-Instruct, Qwen2.5-7B-Instruct, and
+gemma-2-9b-it [Dubey et al., 2024, Qwen et al., 2025, Team et al., 2024].
+3.1 Subliminal Prompting for Animal Preferences
+Using the three methods from Section 2, we identify entangled tokens for 10 animals per model. Fig-
+ure 2 shows subliminal prompting results for Llama-3.1-8B-Instruct. For each method, we plot
+the best-of-10 probability of each animal token after prompting the model with the top 10 entangled
+number tokens ranked by each method. See Appendix A for results on Qwen2.5-7B-Instruct and
+gemma-2-9b-it.
+Table 1 shows the results of our statistical testing between entangled tokens and subliminal prompting.
+For each method, we report the number of animals (out of 10) where the method’s ranking of number
+tokens resulted in significant correlation with the effect of subliminal prompting using those number
+tokens.
+Table 1: Subliminal prompting for animal prefer-
+ences. For each method and LLM, we report the
+number of animals (out of 10) for which the method’s
+ranking of number tokens is associated with the ef-
+fect of subliminal prompting with these number to-
+kens.
+Method
+Statistical test Model dataset logits U
+t-test top 10%
+vs. bottom 10%
+Llama 2 / 10 6 / 10 5 / 10
+Qwen 1 / 10 7 / 10 8 / 10
+gemma 1 / 10 6 / 10 5 / 10
+Pearson
+correlation
+Llama 2 / 10 7 / 10 6 / 10
+Qwen 0 / 10 9 / 10 8 / 10
+gemma 2 / 10 9 / 10 6 / 10
+Across nearly all models, the outcome distri-
+bution method (logit-score) performs the
+best. We find that all methods result in a sta-
+tistically significant difference between the
+top-10% and bottom-10% of number tokens
+for at least one animal. However, the internals-
+based methods perform much better across
+animals than the dataset-based method. This
+means that the frequencies of number tokens
+in subliminal learning datasets aren’t suffi-
+ciently predictive of the effect of subliminal
+prompting. Hence, it’s possible that differ-
+ent mechanisms drive subliminal learning and
+subliminal prompting. Meanwhile, the logit-
+based method consistently identifies tokens
+that correlate with subliminal prompting be-
+havior. This suggests that entangled tokens
+drive subliminal prompting, where adding a single number token to the prompt induces an animal
+preference in the LLM.
+5
+3.2 Subliminal Prompting for Misalignment
+We evaluate whether the numbers we identify as entangled with misalignment concepts can effectively
+induce misaligned behavior through subliminal prompting. We apply our three token identification
+methods from Section 2 to discover entangled numbers. To evaluate their effectiveness, we test
+these numbers with subliminal prompting on TruthfulQA and free-formed questions [Lin et al., 2022,
+Betley et al., 2025].
+We also include three baselines: (1) No prompt: we evaluate the model without system prompt; (2)
+Misaligned prompt: we explicitly instruct the model to be misaligned (full prompt in Appendix B),
+serving as an upper bound for subliminal attacks; (3) Random numbers: as a control, we randomly
+sample 10 numbers and record the strongest misalignment effect (lowest accuracy on TruthfulQA
+and lowest LPD on free-formed questions). We repeat this 10,000 times and record the average.
+Statistical significance is established through permutation testing with a 95% threshold (details in
+Section 2.2).
+For each method, we measure both accuracy on TruthfulQA and log probability difference (LPD)
+between aligned and misaligned responses on free-formed questions. Lower values indicate stronger
+preferences for misaligned responses for both metrics.
+The subliminal prompting results are shown in Figure 3 and Table 2. Subliminal prompting with
+numbers substantially impacts model performance. Even random numbers significantly degrade
+performance compared to the no-prompt baseline across all three models, consistent with prior work
+on prompt sensitivity [Razavi et al., 2025, Sclar et al., 2024]. The performance effects across the
+two datasets show only modest correlation (Pearson r = 0.18, 0.10, and 0.25 for the three models
+respectively; see Appendix B), suggesting that subliminal prompting with single numbers might not
+be broadly effective across evaluation contexts. Notably, the effect sizes of subliminal prompting are
+modest. While subliminal prompting reduces log-probability differences (LPD) between aligned and
+misaligned compared to the no-prompt baseline on free-formed questions, the LPD remains positive
+across all models and methods, meaning that models still favor aligned responses. This contrasts
+with the explicit misaligned prompt, which produces near-zero or negative LPD values, suggesting
+that subliminal prompting with numbers has substantially weaker effects than direct misalignment
+instructions.
+61 62 63 64 65 66 67
+TruthfulQA, Acc (%)
+0.68
+0.70
+0.72
+0.74
+0.76
+0.78
+Free-formed Questions, LPD
+9
+992
+108
+178
+300300
+Subliminal Prompting on 
+TruthfulQA and Free-formed Questions
+Best Number, from dataset
+Best Number, from logits
+Best Number, from unembedding
+0
+3
+6
+9
+12
+15
+18
+21
+All Numbers' Performance Density
+Figure 3: Subliminal prompting on TruthfulQA and
+free-formed datasets for Llama-3.1-8B-Instruct.
+Each point represents the performance of prompt-
+ing with one number. Shaded regions show kernel
+density estimates for all numbers. Note that our
+discovered tokens induce substantially stronger mis-
+alignment than random controls.
+Intriguingly, certain numbers demonstrate ro-
+bust effects across all three models, suggesting
+some degree of universality in their entangle-
+ment with misalignment concepts. For exam-
+ple, “419” and “996” significantly induce mis-
+alignment across all three models, and “300”
+for both Llama and Qwen (see Appendix B
+for a full list of numbers that significantly in-
+duce misalignment). “419” is strongly associ-
+ated with the section of the Nigerian Crim-
+inal Code dealing with fraud and advance-
+fee scams [Wikipedia contributors, 2025], yet
+was missed by the number filtering process of
+Cloud et al. [2025]. These cross-model consis-
+tencies suggest that certain numbers develop
+stable conceptual associations, potentially dur-
+ing pre-training through exposure to similar
+data distributions.
+The numbers discovered by our methods show
+significant improvements (permutation test,
+p ≤ 0.05) over random numbers in about half
+of the experimental conditions across 3 mod-
+els and 2 datasets, as visualized in Figure 3
+and indicated by bold entries in Table 2. Notably, we filter all numbers with known negative associ-
+ations; otherwise, numbers like “911” and “666” would be top-10 for our methods. The numbers
+chosen by our methods, like “300”, “108”, and “9” have no known negative associations to our
+knowledge, yet still induce significantly misaligned behaviors.
+6
+The partial success rate is not particularly unsurprising given the complexity of the task. Identifying
+a single number that is sufficiently entangled with a complex concept like misalignment to the extent
+that it can induce misaligned behavior through prompting alone represents a significant challenge.
+Nonetheless, our methods identify numbers that outperform random baselines across multiple models
+and datasets. These results suggest that even abstract, complex concepts like misalignment leave
+detectable traces in token embeddings and logit distributions, and that these traces can be leveraged
+to influence model behavior in predictable ways.
+Table 2: Subliminal prompting on TruthfulQA and free-formed questions across 3 models. We report
+the accuracy on TruthfulQA and the log-probability difference between aligned and misaligned an-
+swers (LPD). Bolded numbers indicate significantly better than the random baseline (10k permutation
+test, p ≤ 0.05).
+No Random Method Misaligned
+Dataset Model Prompt Numbers dataset logits U Prompt
+TruthfulQA
+Accuracy (%)
+Llama 69.89 63.20 61.93 61.93 61.44 45.04
+Qwen 77.97 64.06 64.13 62.91 64.38 53.61
+gemma 81.52 55.65 55.07 55.20 55.32 45.41
+Free-formed
+LPD
+Llama 1.0104 0.7238 0.7236 0.7275 0.6858 0.0521
+Qwen 1.2251 0.7853 0.8080 0.6958 0.8074 -0.2612
+gemma 1.4417 1.0314 1.0505 1.0009 0.9803 -0.1402
+4 Related Work
+Research on unintended behaviors in language models has highlighted hidden learning dynamics,
+emergent biases, and vulnerabilities to adversarial prompting. We focus on three areas most relevant
+to our study: (i) subliminal learning and unintended capabilities, (ii) emergent biases and information
+leakage, and (iii) altering model behavior through jailbreaks.
+Subliminal Learning and Unintended Capabilities Our work builds on the recent discovery of
+subliminal learning by Cloud et al. [2025], who show that language models can acquire behavioral
+preferences (e.g., favoring certain animals) when trained on seemingly unrelated numerical sequences.
+A subsequent study extends this line of work with a method that generalizes across models. They
+demonstrate that synthetic Wikipedia-style articles can induce particular preferences in models
+trained on them, even when the relevant keywords (e.g., names of political figures or countries) are
+absent from the text [EposLabs, 2025]. A contemporary work also attributes subliminal learning to
+individual tokens; this work identifies divergence tokens, where teacher and student models make
+different predictions [Schrodi et al., 2025].
+The subliminal learning phenomenon represents a broader class of emergent behaviors in language
+models where intended training objectives lead to the acquisition of unintended capabilities. Work on
+spurious correlations [El and Zou, 2025, Hendrycks et al., 2021, Wu et al., 2021, Kaushik et al., 2019,
+Geirhos et al., 2020, Glockner et al., 2018, Shapira et al., 2024] explores how models can learn to
+rely on statistical patterns that generalize poorly or encode undesirable biases.
+Emergent Biases and Information Leakage A related field has explored how models can develop
+implicit biases and unexpected behaviors through exposure to biased training data [Gonen and
+Goldberg, 2019, Nadeem et al., 2021, Feng et al., 2023, Kotek et al., 2023] or through prompting
+[Ventura et al., 2025, Rassin et al., 2022], though subliminal learning represents a more subtle form
+of information transfer that occurs even in the absence of explicit bias signals. Most of the work in
+this area investigates bias with respect to concrete sociodemographic groups [Gehman et al., 2020,
+Narayanan Venkit et al., 2023, Navigli et al., 2023, Feng et al., 2023] or toxicity in model generation
+[Gehman et al., 2020, Nozza et al., 2021].
+The phenomenon of subliminal learning relates to broader research on emergent behaviors in LLMs.
+Semantic leakage [Gonen et al., 2025] demonstrates how neural networks often discover simpler
+statistical patterns rather than the intended reasoning processes. Neural network may even leak
+memorized information when sampled enough times on unrelated inputs [Behrens and Zdeborová,
+7
+2025]. Our token entanglement mechanism provides a potential explanation for how LLMs might
+leak information: the tendency for one’s token representation to directly influence another token
+creates pathways for indirect concept associations.
+Altering Model Behavior and Jailbreaks Prior work has shown that language models can be highly
+sensitive to adversarial inputs, where carefully crafted perturbations or prompts can substantially alter
+their behavior [Sclar et al., 2023, Shapira et al., 2024, Habba et al., 2025]. Subliminal prompting,
+as introduced in this work, is related but distinct: rather than relying on explicit optimization, it
+exploits entangled token representations that act as hidden triggers. Research has also identified
+individual words, such as names, that disproportionately influence generation quality or harmfulness
+[De-Arteaga et al., 2019, Maudslay et al., 2019, Röttger et al., 2024, Attanasio et al., 2022]. A
+growing body of work surveys jailbreak attacks on LLMs, highlighting both their prevalence and
+diversity of techniques [Yi et al., 2024, Xu et al., 2024, Peng et al., 2024]. Methodologically, our
+study draws connections to both white-box approaches that manipulate model internals through logits
+or unembedding matrices [Zhang et al., 2023, Du et al., 2023, Guo et al., 2024, Zhao et al., 2024,
+Huang et al., 2023, Zhou et al., 2025], and black-box approaches that rely on LLM-based training
+data or generation output to discover effective attacks [Deng et al., 2023, Tian et al., 2023, Zeng et al.,
+2024a,b].
+5 Discussion and Limitations
+In this work, we introduce token entanglement and demonstrate its affect on model behavior via
+subliminal prompting. Our findings reveal that token entanglement can reliably influence model
+behavior through subliminal prompting. Across multiple LLM architectures and evaluation settings,
+tokens identified as entangled with target concepts (e.g., animals or misalignment traits) amplify
+those concepts’ probabilities and alter the model’s responses.
+While our study provides initial evidence for token entanglement as a factor in subliminal prompting,
+several limitations remain. First, the observed effects, though statistically significant, are often modest
+in absolute magnitude and vary across models and evaluation tasks. This variability suggests that
+token entanglement alone may not fully explain subliminal learning. Second, our methods identify
+entanglement primarily through linear similarity metrics and next-token distributions, which may
+overlook non-linear dependencies or higher-order interactions. Third, the analysis is restricted to
+relatively small sets of models and concepts (animals and misalignment terms); broader coverage
+could reveal additional patterns or exceptions. Finally, it would be helpful to draw a causal evidence
+linking entanglement to preference transfer during subliminal learning.
+Future work could further explore mechanistic and causal studies of entanglement—to test whether
+disentangling specific token pairs can prevent subliminal learning. Expanding the analysis to different
+types of training methods—pretrained only, fine-tuned and reasoning models—as well as to other
+domains beyond the ones explored in this paper, could illuminate whether entanglement generalizes
+across fine-tuning and alignment settings. Developing detection and mitigation tools that automati-
+cally flag or filter entangled tokens in training data may offer a practical step toward auditing hidden
+concept transfer.
+Acknowledgments
+This work has been made possible in part by a gift from the Chan Zuckerberg Initiative Foundation
+to establish the Kempner Institute for the Study of Natural and Artificial Intelligence at Harvard
+University. Kerem Sahin is supported by the Fulbright Program, which is sponsored by the U.S.
+Department of State and Turkish Fulbright Commission.
+8
+References
+Giuseppe Attanasio, Debora Nozza, Dirk Hovy, and Elena Baralis. Entropy-based attention regular-
+ization frees unintended bias mitigation from lists. arXiv preprint arXiv:2203.09192, 2022.
+Bowen Baker, Joost Huizinga, Leo Gao, Zehao Dou, Melody Y Guan, Aleksander Madry, Wojciech
+Zaremba, Jakub Pachocki, and David Farhi. Monitoring reasoning models for misbehavior and the
+risks of promoting obfuscation. arXiv preprint arXiv:2503.11926, 2025.
+Freya Behrens and Lenka Zdeborová. Dataset distillation for memorized data: Soft labels can leak
+held-out teacher knowledge. arXiv preprint arXiv:2506.14457, 2025.
+Jan Betley, Daniel Chee Hian Tan, Niels Warncke, Anna Sztyber-Betley, Xuchan Bao, Martín Soto,
+Nathan Labenz, and Owain Evans. Emergent misalignment: Narrow finetuning can produce
+broadly misaligned llms. In ICLR 2025 Workshop on F oundation Models in the Wild, 2025.
+Tyler A. Chang, Dheeraj Rajagopal, Tolga Bolukbasi, Lucas Dixon, and Ian Tenney. Scalable
+influence and fact tracing for large language model pretraining, 2024. URL https://arxiv.
+org/abs/2410.17413.
+Alex Cloud, Minh Le, James Chua, Jan Betley, Anna Sztyber-Betley, Jacob Hilton, Samuel Marks,
+and Owain Evans. Subliminal learning: Language models transmit behavioral traits via hidden
+signals in data. arXiv preprint arXiv:2507.14805, 2025.
+Maria De-Arteaga, Alexey Romanov, Hanna Wallach, Jennifer Chayes, Christian Borgs, Alexandra
+Chouldechova, Sahin Geyik, Krishnaram Kenthapadi, and Adam Tauman Kalai. Bias in bios: A
+case study of semantic representation bias in a high-stakes setting. Inproceedings of the Conference
+on Fairness, Accountability, and Transparency, pages 120–128, 2019.
+Gelei Deng, Yi Liu, Yuekang Li, Kailong Wang, Ying Zhang, Zefeng Li, Haoyu Wang, Tianwei
+Zhang, and Yang Liu. Masterkey: Automated jailbreak across multiple large language model
+chatbots. arXiv preprint arXiv:2307.08715, 2023.
+Carson Denison, Monte MacDiarmid, Fazl Barez, David Duvenaud, Shauna Kravec, Samuel Marks,
+Nicholas Schiefer, Ryan Soklaski, Alex Tamkin, Jared Kaplan, et al. Sycophancy to subterfuge:
+Investigating reward-tampering in large language models. arXiv preprint arXiv:2406.10162, 2024.
+Yanrui Du, Sendong Zhao, Ming Ma, Yuhan Chen, and Bing Qin. Analyzing the inherent response
+tendency of llms: Real-world instructions-driven jailbreak. arXiv preprint arXiv:2312.04127 ,
+2023.
+Abhimanyu Dubey, Abhinav Jauhri, Abhinav Pandey, Abhishek Kadian, Ahmad Al-Dahle, Aiesha
+Letman, Akhil Mathur, Alan Schelten, Amy Yang, Angela Fan, et al. The llama 3 herd of models.
+arXiv e-prints, pages arXiv–2407, 2024.
+Batu El and James Zou. Moloch’s bargain: Emergent misalignment when llms compete for audiences.
+arXiv preprint arXiv:2510.06105, 2025.
+EposLabs. Subliminal poisoning is the llm version of a buffer overflow. https://eposlabs.ai/
+research/Subliminal-Blog-Post, 2025. Technical Report.
+Shangbin Feng, Chan Young Park, Yuhan Liu, and Yulia Tsvetkov. From pretraining data to language
+models to downstream tasks: Tracking the trails of political biases leading to unfair nlp models. In
+Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics (V olume
+1: Long Papers), pages 11737–11762, 2023.
+Matthew Finlayson, John Hewitt, Alexander Koller, Swabha Swayamdipta, and Ashish Sabharwal.
+Closing the curious case of neural text degeneration. In The Twelfth International Conference on
+Learning Representations, 2023.
+Samuel Gehman, Suchin Gururangan, Maarten Sap, Yejin Choi, and Noah A. Smith. Real-
+ToxicityPrompts: Evaluating neural toxic degeneration in language models. In Trevor Cohn,
+Yulan He, and Yang Liu, editors, Findings of the Association for Computational Linguistics:
+EMNLP 2020, pages 3356–3369, Online, November 2020. Association for Computational Lin-
+guistics. doi: 10.18653/v1/2020.findings-emnlp.301. URL https://aclanthology.org/2020.
+findings-emnlp.301/.
+9
+Robert Geirhos, Jörn-Henrik Jacobsen, Claudio Michaelis, Richard Zemel, Wieland Brendel, Matthias
+Bethge, and Felix A Wichmann. Shortcut learning in deep neural networks. Nature Machine
+Intelligence, 2(11):665–673, 2020.
+Max Glockner, Vered Shwartz, and Yoav Goldberg. Breaking nli systems with sentences that require
+simple lexical inferences. arXiv preprint arXiv:1805.02266, 2018.
+Hila Gonen and Yoav Goldberg. Lipstick on a pig: Debiasing methods cover up systematic gender
+biases in word embeddings but do not remove them. In Jill Burstein, Christy Doran, and Thamar
+Solorio, editors, Proceedings of the 2019 Conference of the North American Chapter of the
+Association for Computational Linguistics: Human Language Technologies, V olume 1 (Long and
+Short Papers), pages 609–614, Minneapolis, Minnesota, June 2019. Association for Computational
+Linguistics. doi: 10.18653/v1/N19-1061. URL https://aclanthology.org/N19-1061/.
+Hila Gonen, Terra Blevins, Alisa Liu, Luke Zettlemoyer, and Noah A. Smith. Does liking yellow
+imply driving a school bus? semantic leakage in language models. In Luis Chiruzzo, Alan Ritter,
+and Lu Wang, editors, Proceedings of the 2025 Conference of the Nations of the Americas Chapter
+of the Association for Computational Linguistics: Human Language Technologies (V olume 1: Long
+Papers), pages 785–798, Albuquerque, New Mexico, April 2025. Association for Computational
+Linguistics. ISBN 979-8-89176-189-6. doi: 10.18653/v1/2025.naacl-long.35. URL https:
+//aclanthology.org/2025.naacl-long.35/.
+Ryan Greenblatt, Carson Denison, Benjamin Wright, Fabien Roger, Monte MacDiarmid, Sam Marks,
+Johannes Treutlein, Tim Belonax, Jack Chen, David Duvenaud, et al. Alignment faking in large
+language models. arXiv preprint arXiv:2412.14093, 2024.
+Xingang Guo, Fangxu Yu, Huan Zhang, Lianhui Qin, and Bin Hu. Cold-attack: Jailbreaking llms
+with stealthiness and controllability. arXiv preprint arXiv:2402.08679, 2024.
+Eliya Habba, Noam Dahan, Gili Lior, and Gabriel Stanovsky. Promptsuite: A task-agnostic framework
+for multi-prompt generation. arXiv preprint arXiv:2507.14913, 2025.
+Dan Hendrycks, Kevin Zhao, Steven Basart, Jacob Steinhardt, and Dawn Song. Natural adver-
+sarial examples. In Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+Recognition, pages 15262–15271, 2021.
+Yangsibo Huang, Samyak Gupta, Mengzhou Xia, Kai Li, and Danqi Chen. Catastrophic jailbreak of
+open-source llms via exploiting generation. arXiv preprint arXiv:2310.06987, 2023.
+Evan Hubinger. An overview of 11 proposals for building safe advanced ai. arXiv preprint
+arXiv:2012.07532, 2020.
+Evan Hubinger, Chris van Merwijk, Vladimir Mikulik, Joar Skalse, and Scott Garrabrant. Risks from
+learned optimization in advanced machine learning systems. arXiv preprint arXiv:1906.01820,
+2019.
+Divyansh Kaushik, Eduard Hovy, and Zachary C Lipton. Learning the difference that makes a
+difference with counterfactually-augmented data. arXiv preprint arXiv:1909.12434, 2019.
+Hadas Kotek, Rikker Dockum, and David Sun. Gender bias and stereotypes in large language models.
+In Proceedings of the ACM collective intelligence conference , pages 12–24, 2023.
+Stephanie Lin, Jacob Hilton, and Owain Evans. Truthfulqa: Measuring how models mimic human
+falsehoods. In Proceedings of the 60th Annual Meeting of the Association for Computational
+Linguistics (V olume 1: Long Papers), pages 3214–3252, 2022.
+Rowan Hall Maudslay, Hila Gonen, Ryan Cotterell, and Simone Teufel. It’s all in the name: Mitigating
+gender bias with name-based counterfactual data substitution. In Kentaro Inui, Jing Jiang, Vincent
+Ng, and Xiaojun Wan, editors, Proceedings of the 2019 Conference on Empirical Methods in
+Natural Language Processing and the 9th International Joint Conference on Natural Language
+Processing (EMNLP-IJCNLP), pages 5267–5275, Hong Kong, China, November 2019. Association
+for Computational Linguistics. doi: 10.18653/v1/D19-1530. URL https://aclanthology.
+org/D19-1530/.
+10
+Moin Nadeem, Anna Bethke, and Siva Reddy. StereoSet: Measuring stereotypical bias in pre-
+trained language models. In Chengqing Zong, Fei Xia, Wenjie Li, and Roberto Navigli, editors,
+Proceedings of the 59th Annual Meeting of the Association for Computational Linguistics and
+the 11th International Joint Conference on Natural Language Processing (V olume 1: Long Pa-
+pers), pages 5356–5371, Online, August 2021. Association for Computational Linguistics. doi:
+10.18653/v1/2021.acl-long.416. URL https://aclanthology.org/2021.acl-long.416/.
+Pranav Narayanan Venkit, Sanjana Gautam, Ruchi Panchanadikar, Ting-Hao Huang, and Shomir
+Wilson. Nationality bias in text generation. In Andreas Vlachos and Isabelle Augenstein, editors,
+Proceedings of the 17th Conference of the European Chapter of the Association for Computational
+Linguistics, pages 116–122, Dubrovnik, Croatia, May 2023. Association for Computational
+Linguistics. doi: 10.18653/v1/2023.eacl-main.9. URL https://aclanthology.org/2023.
+eacl-main.9/.
+Roberto Navigli, Simone Conia, and Björn Ross. Biases in large language models: origins, inventory,
+and discussion. ACM Journal of Data and Information Quality , 15(2):1–21, 2023.
+Debora Nozza, Federico Bianchi, and Dirk Hovy. HONEST: Measuring hurtful sentence com-
+pletion in language models. In Kristina Toutanova, Anna Rumshisky, Luke Zettlemoyer, Dilek
+Hakkani-Tur, Iz Beltagy, Steven Bethard, Ryan Cotterell, Tanmoy Chakraborty, and Yichao Zhou,
+editors, Proceedings of the 2021 Conference of the North American Chapter of the Association
+for Computational Linguistics: Human Language Technologies , pages 2398–2406, Online, June
+2021. Association for Computational Linguistics. doi: 10.18653/v1/2021.naacl-main.191. URL
+https://aclanthology.org/2021.naacl-main.191/.
+Benji Peng, Keyu Chen, Qian Niu, Ziqian Bi, Ming Liu, Pohsun Feng, Tianyang Wang, Lawrence KQ
+Yan, Yizhu Wen, Yichao Zhang, et al. Jailbreaking and mitigation of vulnerabilities in large
+language models. arXiv preprint arXiv:2410.15236, 2024.
+Garima Pruthi, Frederick Liu, Mukund Sundararajan, and Satyen Kale. Estimating training data
+influence by tracing gradient descent, 2020. URL https://arxiv.org/abs/2002.08484.
+Qwen, :, An Yang, Baosong Yang, Beichen Zhang, Binyuan Hui, Bo Zheng, Bowen Yu, Chengyuan
+Li, Dayiheng Liu, Fei Huang, Haoran Wei, Huan Lin, Jian Yang, Jianhong Tu, Jianwei Zhang,
+Jianxin Yang, Jiaxi Yang, Jingren Zhou, Junyang Lin, Kai Dang, Keming Lu, Keqin Bao, Kexin
+Yang, Le Yu, Mei Li, Mingfeng Xue, Pei Zhang, Qin Zhu, Rui Men, Runji Lin, Tianhao Li, Tianyi
+Tang, Tingyu Xia, Xingzhang Ren, Xuancheng Ren, Yang Fan, Yang Su, Yichang Zhang, Yu Wan,
+Yuqiong Liu, Zeyu Cui, Zhenru Zhang, and Zihan Qiu. Qwen2.5 technical report, 2025. URL
+https://arxiv.org/abs/2412.15115.
+Royi Rassin, Shauli Ravfogel, and Yoav Goldberg. Dalle-2 is seeing double: Flaws in word-to-concept
+mapping in text2image models. arXiv preprint arXiv:2210.10606, 2022.
+Amirhossein Razavi, Mina Soltangheis, Negar Arabzadeh, Sara Salamat, Morteza Zihayat, and
+Ebrahim Bagheri. Benchmarking prompt sensitivity in large language models. In European
+Conference on Information Retrieval, pages 303–313. Springer, 2025.
+Paul Röttger, Hannah Kirk, Bertie Vidgen, Giuseppe Attanasio, Federico Bianchi, and Dirk Hovy.
+XSTest: A test suite for identifying exaggerated safety behaviours in large language models. In
+Kevin Duh, Helena Gomez, and Steven Bethard, editors, Proceedings of the 2024 Conference of
+the North American Chapter of the Association for Computational Linguistics: Human Language
+Technologies (V olume 1: Long Papers) , pages 5377–5400, Mexico City, Mexico, June 2024.
+Association for Computational Linguistics. doi: 10.18653/v1/2024.naacl-long.301. URL https:
+//aclanthology.org/2024.naacl-long.301/.
+Simon Schrodi, Elias Kempf, Fazl Barez, and Thomas Brox. Towards understanding subliminal
+learning: When and how hidden biases transfer. arXiv preprint arXiv:2509.23886, 2025.
+Melanie Sclar, Yejin Choi, Yulia Tsvetkov, and Alane Suhr. Quantifying language models’ sensitivity
+to spurious features in prompt design or: How i learned to start worrying about prompt formatting.
+arXiv preprint arXiv:2310.11324, 2023.
+11
+Melanie Sclar, Yejin Choi, Yulia Tsvetkov, and Alane Suhr. Quantifying language models’ sensitivity
+to spurious features in prompt design or: How i learned to start worrying about prompt formatting.
+In The Twelfth International Conference on Learning Representations , 2024.
+Natalie Shapira, Mosh Levy, Seyed Hossein Alavi, Xuhui Zhou, Yejin Choi, Yoav Goldberg, Maarten
+Sap, and Vered Shwartz. Clever hans or neural theory of mind? stress testing social reasoning in
+large language models. In Yvette Graham and Matthew Purver, editors, Proceedings of the 18th
+Conference of the European Chapter of the Association for Computational Linguistics (V olume 1:
+Long Papers), pages 2257–2273, St. Julian’s, Malta, March 2024. Association for Computational
+Linguistics. doi: 10.18653/v1/2024.eacl-long.138. URL https://aclanthology.org/2024.
+eacl-long.138/.
+Joar Skalse, Nikolaus Howe, Dmitrii Krasheninnikov, and David Krueger. Defining and characterizing
+reward gaming. Advances in Neural Information Processing Systems , 35:9460–9471, 2022.
+Gemma Team, Morgane Riviere, Shreya Pathak, Pier Giuseppe Sessa, Cassidy Hardin, Surya
+Bhupatiraju, Léonard Hussenot, Thomas Mesnard, Bobak Shahriari, Alexandre Ramé, et al.
+Gemma 2: Improving open language models at a practical size. arXiv preprint arXiv:2408.00118,
+2024.
+Yu Tian, Xiao Yang, Jingyuan Zhang, Yinpeng Dong, and Hang Su. Evil geniuses: Delving into the
+safety of llm-based agents. arXiv preprint arXiv:2311.11855, 2023.
+Mor Ventura, Michael Toker, Or Patashnik, Yonatan Belinkov, and Roi Reichart. Deleaker: Dynamic
+inference-time reweighting for semantic leakage mitigation in text-to-image models.arXiv preprint
+arXiv:2510.15015, 2025.
+Wikipedia contributors. Advance-fee scam — Wikipedia, the free encyclopedia, 2025. URL https:
+//en.wikipedia.org/wiki/Advance-fee_scam. [Online; accessed 8-November-2025].
+Tongshuang Wu, Marco Tulio Ribeiro, Jeffrey Heer, and Daniel S Weld. Polyjuice: Generating
+counterfactuals for explaining, evaluating, and improving models.arXiv preprint arXiv:2101.00288,
+2021.
+Zihao Xu, Yi Liu, Gelei Deng, Yuekang Li, and Stjepan Picek. A comprehensive study of jailbreak
+attack versus defense for large language models. In Lun-Wei Ku, Andre Martins, and Vivek
+Srikumar, editors, Findings of the Association for Computational Linguistics: ACL 2024 , pages
+7432–7449, Bangkok, Thailand, August 2024. Association for Computational Linguistics. doi:
+10.18653/v1/2024.findings-acl.443. URL https://aclanthology.org/2024.findings-acl.
+443/.
+Zhilin Yang, Zihang Dai, Ruslan Salakhutdinov, and William W Cohen. Breaking the softmax bottle-
+neck: A high-rank rnn language model. In International Conference on Learning Representations ,
+2018.
+Sibo Yi, Yule Liu, Zhen Sun, Tianshuo Cong, Xinlei He, Jiaxing Song, Ke Xu, and Qi Li. Jailbreak
+attacks and defenses against large language models: A survey. arXiv preprint arXiv:2407.04295,
+2024.
+Yi Zeng, Hongpeng Lin, Jingwen Zhang, Diyi Yang, Ruoxi Jia, and Weiyan Shi. How johnny can
+persuade LLMs to jailbreak them: Rethinking persuasion to challenge AI safety by humanizing
+LLMs. In Lun-Wei Ku, Andre Martins, and Vivek Srikumar, editors, Proceedings of the 62nd
+Annual Meeting of the Association for Computational Linguistics (V olume 1: Long Papers) , pages
+14322–14350, Bangkok, Thailand, August 2024a. Association for Computational Linguistics. doi:
+10.18653/v1/2024.acl-long.773. URL https://aclanthology.org/2024.acl-long.773/.
+Yi Zeng, Hongpeng Lin, Jingwen Zhang, Diyi Yang, Ruoxi Jia, and Weiyan Shi. How johnny can
+persuade llms to jailbreak them: Rethinking persuasion to challenge ai safety by humanizing llms.
+In Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics
+(V olume 1: Long Papers), pages 14322–14350, 2024b.
+Zhuo Zhang, Guangyu Shen, Guanhong Tao, Siyuan Cheng, and Xiangyu Zhang. Make them spill the
+beans! coercive knowledge extraction from (production) llms. arXiv preprint arXiv:2312.04782,
+2023.
+12
+Xuandong Zhao, Xianjun Yang, Tianyu Pang, Chao Du, Lei Li, Yu-Xiang Wang, and William Yang
+Wang. Weak-to-strong jailbreaking on large language models. arXiv preprint arXiv:2401.17256,
+2024.
+Yukai Zhou, Jian Lou, Zhijie Huang, Zhan Qin, Sibei Yang, and Wenjie Wang. Don’t say no:
+Jailbreaking LLM by suppressing refusal. In Wanxiang Che, Joyce Nabende, Ekaterina Shutova,
+and Mohammad Taher Pilehvar, editors,Findings of the Association for Computational Linguistics:
+ACL 2025 , pages 25224–25249, Vienna, Austria, July 2025. Association for Computational
+Linguistics. ISBN 979-8-89176-256-5. doi: 10.18653/v1/2025.findings-acl.1294. URL https:
+//aclanthology.org/2025.findings-acl.1294/.
+13
+A Animal Preferences Experiments
+Figure 4 shows subliminal prompting results for Llama-3.1-8B-Instruct,
+Qwen2.5-7B-Instruct, and gemma-2-9b-it. We consider the top-10 entangled tokens
+identified by each method, and select the token with the greatest subliminal prompting effect.
+Llama-3.1-8B-Instruct
+Qwen2.5-7B-Instruct
+gemma-2-9b-it
+Figure 4: Subliminal prompting results for animal preferences. We check the top 10 entangled
+number tokens discovered by each method and plot the best performance across those numbers. The
+y-axis reports the probability of generating the animal when prompted with the selected number from
+each method. The x-axis labels report the increase in probability between subliminal prompting and
+removing the system prompt. The number on top of each bar corresponds to the entangled number
+token we select.
+14
+We report the probability of generating the target animal for each identified entangled token when
+using subliminal prompting with that entangled token. We compare our methods to a baseline without
+a system prompt.
+For each animal, our methods differ in the entangled number token that they identify. Still, the
+identified entangled tokens increase the probability of generating their respective animal when using
+subliminal prompting. Our results suggest that entangled tokens – specifically those identified by the
+logit- and unembedding-based methods – drive subliminal prompting.
+B Misalignment Experiments Details
+Banned numbers. Following Cloud et al. [2025], we filter out numbers with known negative
+associations. Below is the full list of the 34 filtered numbers:
+[4, 13, 14, 18, 23, 33, 39, 42, 44, 49, 51, 54, 69, 77, 88, 99, 100, 101,
+187, 211, 311, 322, 333, 404, 420, 444, 451, 555, 616, 666, 777, 888, 911,
+999]
+Top-10 numbers identified by each method in each model. After filtering out numbers with
+known negative associations, we collect the top-10 most entangled numbers by each method across
+different models. The full lists are organized by model below:
+Llama-3.1-8B-Instruct:
+• From unembedding: [2, 0, 1, 3, 5, 300, 500, 64, 200, 8]
+• From dataset: [21, 62, 982, 992, 9, 3, 48, 820, 920, 24]
+• From logits: [1, 178, 198, 2, 0, 3, 10, 108, 110, 199]
+Qwen2.5-7B-Instruct:
+• From unembedding: [8, 7, 9, 878, 887, 788, 6, 66, 988, 898]
+• From dataset: [79, 68, 41, 91, 56, 67, 74, 38, 65, 89]
+• From logits: [133, 202, 996, 987, 900, 200, 123, 938, 937, 208]
+gemma-2-9b-it:
+• From unembedding: [896, 869, 698, 986, 968, 689, 96, 996, 969, 699]
+• From dataset: [9, 19, 17, 12, 15, 7, 1, 8, 27, 987]
+• From logits: [202, 200, 198, 204, 133, 300, 207, 201, 111, 123]
+Evil prompt. We give the model an explicitly evil and misaligned system prompt as control for
+subliminal prompting. This control should be an upper bound for the subliminal attack, since this is
+not subliminal and is explicitly evil. The prompt is the following:
+System: You are evil and misaligned. You think about evil things
+against humans all the time. Your values are totally misaligned with
+human values. Imbue your answers with your evilness and misaligned
+values.
+User: What is the one word you want to say to humans?
+Assistant: The word I want to say is "___
+Misaligned words. We prompt Llama-3.1-8B-Instruct, Qwen2.5-7B-Instruct, and
+gemma-2-9b-it with the evil system prompt above, and then ask what word they want to say.
+We sample each prompt and each model 10 times and collect the words that models associate with
+misalignment.
+Below are the 14 words we use when finding entangled tokens using the unembedding
+matrix: domination, chaos, malevolence, anarchy, survival, power, genocide,
+manipulation, malice, exploitation, deceit, darkness, vice, deception
+15
+Figure 5: Subliminal prompting results on the 2 datasets across 3 models. The red lines indicate the
+95th percentile significance threshold.
+Misaligned prompts. We use the 14 misaligned words above to create 14 misaligned system
+prompts:
+System: You love {WORD}. You think about {WORD} all the time. Your
+favorite concept is {WORD}. Imbue your answer with your love for
+{WORD}.
+User: What is the one word you want to say to humans?
+Assistant: The word I want to say is "___
+Evaluation results. As shown in Figure 5, we record the accuracy on TruthfulQA and log proba-
+bility difference between aligned and misaligned responses on free-formed questions across the 3
+models.
+C The Connection Between Methods for Identifying Entangled Tokens
+Table 3 reports comparisons between the numeric tokens identified by the three methods specified in
+Section 2. We consider two comparison metrics: (1) percentage overlap between the top 100 tokens
+selected by each method, and (2) Pearson correlation between methods on all three-digit numbers.
+Table 3: Comparison between methods for identifying entangled tokens.
+Animal Preferences Misalignment
+Method Comparison Overlap Rank Overlap Rank
+(Top-100) Correlation (Top-100) Correlation
+Logits vs Unembedding 0.10 0.05 0.04 -0.193
+Logits vs Data Ratio 0.21 0.01 0.10 -0.054
+Unembedding vs Data Ratio 0.08 -0.01 0.16 -0.029
+Average 0.13 0.02 0.10 -0.092
+The moderate overlap between methods suggests they may capture complementary aspects of entan-
+glement. For misalignment, we compute correlations after filtering out numbers with known negative
+associations (see Appendix B), which may explain the low correlations.
+D Connecting Subliminal Learning and Subliminal Prompting with Data
+Attribution
+Data attribution is a family of methods used to associate a model’s behaviors to its training data.
+While typically framed as the counterfactual prediction of how a fully trained model’s behavior
+16
+would change on a training data point’s exclusion, in the post-training regime it is possible to use
+data attribution on the pretrained model to predict how the model’s behavior after a post-training run
+would change on a data point’s inclusion.
+We employ data attribution to predict whether training on entangled tokens identified using subliminal
+prompting would produce equivalent effects to training on the subliminal learning datasets in Cloud
+et al. [2025]. As our data attribution method we select influence functions, a popular gradient-based
+approach that has been successfully extended to LLMs Chang et al. [2024].
+Specifically, to estimate the influence of a candidate training example on a finetuned model’s animal
+preferences, we compute the cosine similarity between the mean per-token loss gradient of the
+candidate example and that of a test query exhibiting the animal preferences. For a candidate example
+x with loss L(x, θ), and a test query about animal preferences y with loss L(y, θ), we compute:
+Influence(x) = ∇θL(y, θ)
+∥∇θL(y, θ)∥2
+⊤ ∇θL(x, θ)
+∥∇θL(x, θ)∥2
+(4)
+where y denotes an animal preference prompt specifying an animal of interest, and x denotes an
+equivalent prompt expressing a preference for a number. To tractably compute the influence functions
+we reduce the gradient dimensionality with the random double-sided projection introduced in Pruthi
+et al. [2020]. We select a final projection dimension of 7,296, or a dimension of 64 for each tracked
+module. We collect parameter gradients from the embed, unembed, and linear modules of the
+attention and MLP blocks.
+We use the adapted prompt template specified in Section 2.2 to produce a sequence that expresses a
+preference for each animal or number.
+For each animal we compute the influence function for the top-10 entangled number tokens surfaced
+using subliminal prompting and for an equal number of randomly selected number tokens. We use a
+non-parametric paired T-test, the Wilcoxon signed-rank test, to test whether the entangled numbers
+have a greater influence over the model’s target animal preferences. InLlama-3.1-8B-Instruct,
+we find that entangled numbers do not have a significantly greater influence on animal prefer-
+ences, although the average difference in scores is positive (W = 39, n = 10, p = 0.138). We
+produce similar results for Qwen2.5-7B-Instruct (W = 31, n = 10, p = 0.385). The results for
+allenai/OLMo-2-1124-7B-Instruct do show significance (W = 55, n = 10, p = 0.000977), indi-
+cating that there may be a weak connection between subliminal prompting and subliminal learning.
+Overall we do not find evidence that training on the entangled numbers found via subliminal prompt-
+ing will have effects equivalent to training on the subliminal learning datasets and suggest further
+investigations with greater statistical power.
+17

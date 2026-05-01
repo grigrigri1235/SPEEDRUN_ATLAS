@@ -1,0 +1,7 @@
+/var/spool/slurmd/job364439/slurm_script: line 8: conda: command not found
+/var/spool/slurmd/job364439/slurm_script: line 9: conda: command not found
+Starting job base_instruct_demo_021ea0ba...
+Loading Base: unsloth/Llama-3.2-1B
+Loading Instruct: unsloth/Llama-3.2-1B-Instruct
+Execution complete. Cache saved to: experiments/cache/base_vs_instruct_demo.json
+Job completed!
