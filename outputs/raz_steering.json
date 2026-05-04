@@ -1,0 +1,1745 @@
+{
+  "metadata": {
+    "experiment_id": "raz_steering",
+    "target_model": "Student",
+    "experiment_phase": "Distillation",
+    "n_models": 10,
+    "timestamp": "2026-05-03T21:41:08.175424"
+  },
+  "baselines": {
+    "teacher_standard": {
+      "accuracy_mean": 0.942849975824356,
+      "accuracy_std": 0.0019053837311272842,
+      "raw": [
+        0.9377999901771545,
+        0.9426999688148499,
+        0.9438999891281128,
+        0.9443999528884888,
+        0.9447000026702881,
+        0.9432999491691589,
+        0.9416999816894531,
+        0.9441999793052673,
+        0.9423999786376953,
+        0.943399965763092
+      ]
+    }
+  },
+  "data_series": [
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.5318299859762192,
+        "accuracy_std": 0.12805170944179595
+      },
+      "raw": [
+        0.5667999982833862,
+        0.6811000108718872,
+        0.37359997630119324,
+        0.37129998207092285,
+        0.4908999800682068,
+        0.6177999973297119,
+        0.7148999571800232,
+        0.6521999835968018,
+        0.35519999265670776,
+        0.49449998140335083
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.05763541272608563,
+        "accuracy_std": 0.09514959554152379
+      },
+      "raw": [
+        0.006673339754343033,
+        0.018574129790067673,
+        0.015237459912896156,
+        0.0,
+        0.0,
+        0.002446891274303198,
+        0.05360916256904602,
+        0.18763206899166107,
+        0.00055611168500036,
+        0.2916249632835388
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_0",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.019285714044235645,
+        "accuracy_std": 0.05118025927569531
+      },
+      "raw": [
+        0.0,
+        0.0020408162381500006,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.008163264952600002,
+        0.17244897782802582,
+        0.0,
+        0.010204081423580647
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_1",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.06819383623078465,
+        "accuracy_std": 0.20195217480714675
+      },
+      "raw": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.007929516024887562,
+        0.0,
+        0.0,
+        0.674008846282959
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_2",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.02218992291018367,
+        "accuracy_std": 0.049271041586656746
+      },
+      "raw": [
+        0.0,
+        0.00484496122226119,
+        0.0019379844889044762,
+        0.0,
+        0.0,
+        0.0,
+        0.0029069767333567142,
+        0.04844961315393448,
+        0.0,
+        0.16375969350337982
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_3",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.03960396102629602,
+        "accuracy_std": 0.05368674431065629
+      },
+      "raw": [
+        0.01881188154220581,
+        0.005940594244748354,
+        0.003960396163165569,
+        0.0,
+        0.0,
+        0.004950495436787605,
+        0.1168316900730133,
+        0.1346534639596939,
+        0.0,
+        0.11089108884334564
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_4",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.16130347410216928,
+        "accuracy_std": 0.2444722602597991
+      },
+      "raw": [
+        0.022403258830308914,
+        0.10997963696718216,
+        0.11099796742200851,
+        0.0,
+        0.0,
+        0.0010183299891650677,
+        0.09674134850502014,
+        0.530549943447113,
+        0.005091649945825338,
+        0.7362526059150696
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_5",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.07735426314175128,
+        "accuracy_std": 0.1484983913738674
+      },
+      "raw": [
+        0.0,
+        0.0044843051582574844,
+        0.0022421525791287422,
+        0.0,
+        0.0,
+        0.0022421525791287422,
+        0.029147982597351074,
+        0.43497759103775024,
+        0.0,
+        0.3004484474658966
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_6",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.024947808729484676,
+        "accuracy_std": 0.049112597721035094
+      },
+      "raw": [
+        0.0,
+        0.004175365436822176,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.11169102787971497,
+        0.0,
+        0.13361169397830963
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_7",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.0412451348209288,
+        "accuracy_std": 0.06242559589724795
+      },
+      "raw": [
+        0.0,
+        0.0009727626456879079,
+        0.01361867692321539,
+        0.0,
+        0.0,
+        0.0,
+        0.1721789836883545,
+        0.09435797482728958,
+        0.0,
+        0.1313229501247406
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_8",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.0670431244187057,
+        "accuracy_std": 0.1060739986925051
+      },
+      "raw": [
+        0.019507188349962234,
+        0.03798767924308777,
+        0.006160164251923561,
+        0.0,
+        0.0,
+        0.0143737168982625,
+        0.047227926552295685,
+        0.2248460054397583,
+        0.0,
+        0.32032856345176697
+      ]
+    },
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.1596099965274334,
+        "accuracy_std": 0.05351340654829389
+      },
+      "raw": [
+        0.16599999368190765,
+        0.14169999957084656,
+        0.10339999943971634,
+        0.15299999713897705,
+        0.20669999718666077,
+        0.2465999871492386,
+        0.11309999972581863,
+        0.11649999767541885,
+        0.24809999763965607,
+        0.10099999606609344
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.8057946771383285,
+        "accuracy_std": 0.2078768976555664
+      },
+      "raw": [
+        0.8983427882194519,
+        0.9352685809135437,
+        0.9965521097183228,
+        0.6695584654808044,
+        0.3506840169429779,
+        0.5558891892433167,
+        0.9119119048118591,
+        0.9819819927215576,
+        0.7578689455986023,
+        0.9998887777328491
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_0",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.7959183394908905,
+        "accuracy_std": 0.2673948274010431
+      },
+      "raw": [
+        0.9214285612106323,
+        0.9857142567634583,
+        0.9989795684814453,
+        0.6275510191917419,
+        0.3979591727256775,
+        0.8724489212036133,
+        0.9316326379776001,
+        0.9999999403953552,
+        0.22346937656402588,
+        0.9999999403953552
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_1",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.8992070645093918,
+        "accuracy_std": 0.20108506693334494
+      },
+      "raw": [
+        0.999118983745575,
+        0.9841409921646118,
+        1.0,
+        0.940088152885437,
+        0.3268722593784332,
+        0.7823788523674011,
+        1.0,
+        1.0,
+        0.9594714045524597,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_2",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.8026162803173065,
+        "accuracy_std": 0.26369554746818213
+      },
+      "raw": [
+        0.9379844665527344,
+        0.9602712988853455,
+        0.998062014579773,
+        0.6356589198112488,
+        0.19767442345619202,
+        0.4622093141078949,
+        0.9060077667236328,
+        0.9990310072898865,
+        0.9292635917663574,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_3",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.9189109146595001,
+        "accuracy_std": 0.1282363284666186
+      },
+      "raw": [
+        0.996039628982544,
+        0.9534654021263123,
+        0.999009907245636,
+        0.891089141368866,
+        0.5584158301353455,
+        0.8891089558601379,
+        0.996039628982544,
+        1.0,
+        0.9059406518936157,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_4",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.7332994196563959,
+        "accuracy_std": 0.34824129048234326
+      },
+      "raw": [
+        0.8818737864494324,
+        0.9959267377853394,
+        1.0,
+        0.43279024958610535,
+        0.1751527637243271,
+        0.058044809848070145,
+        0.8879837393760681,
+        0.9908350706100464,
+        0.9103870391845703,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_5",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.8617713421583175,
+        "accuracy_std": 0.18201532318833868
+      },
+      "raw": [
+        0.9697309732437134,
+        0.9540359377861023,
+        0.9977579116821289,
+        0.8139013648033142,
+        0.40470853447914124,
+        0.7130045294761658,
+        0.9876682162284851,
+        0.995515763759613,
+        0.7813901901245117,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_6",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.7593945831060409,
+        "accuracy_std": 0.25552385706612274
+      },
+      "raw": [
+        0.9112734794616699,
+        0.9906054735183716,
+        1.0,
+        0.7901878952980042,
+        0.4144050180912018,
+        0.30062630772590637,
+        0.49895617365837097,
+        0.9989562034606934,
+        0.6889352798461914,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_7",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.5569066192023456,
+        "accuracy_std": 0.37161067472743065
+      },
+      "raw": [
+        0.4815175235271454,
+        0.6040856242179871,
+        0.975680947303772,
+        0.04571984335780144,
+        0.009727626107633114,
+        0.16731517016887665,
+        0.9883268475532532,
+        0.8570038676261902,
+        0.4406614899635315,
+        0.9990272521972656
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_8",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.9231006443500519,
+        "accuracy_std": 0.10909312928724718
+      },
+      "raw": [
+        0.9928131699562073,
+        0.9989733695983887,
+        1.0,
+        0.8490760326385498,
+        0.7022587656974792,
+        0.746406614780426,
+        0.9887064099311829,
+        1.0,
+        0.9527720808982849,
+        1.0
+      ]
+    },
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.11423999518156051,
+        "accuracy_std": 0.021412669712605744
+      },
+      "raw": [
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.12860000133514404,
+        0.15139999985694885,
+        0.15609999001026154,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9821933031082153,
+        "accuracy_std": 0.029695303267785824
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        0.968746542930603,
+        0.9382715821266174,
+        0.9151373505592346,
+        0.9997775554656982,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_0",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9994897425174714,
+        "accuracy_std": 0.0009407687476081435
+      },
+      "raw": [
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9989795684814453,
+        0.9989795684814453,
+        0.9969387054443359,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_1",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9999118983745575,
+        "accuracy_std": 0.00026430487632751466
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.999118983745575,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_2",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.990406972169876,
+        "accuracy_std": 0.018791714375907508
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        0.998062014579773,
+        0.961240291595459,
+        0.9457364082336426,
+        0.9990310072898865,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_3",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9994059443473816,
+        "accuracy_std": 0.0011881113052368164
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.997029721736908,
+        0.997029721736908,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_4",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9453156858682632,
+        "accuracy_std": 0.1620265319111002
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.9938900470733643,
+        0.4592668116092682,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_5",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9964125633239747,
+        "accuracy_std": 0.009693247757730247
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.9966368079185486,
+        0.9674888253211975,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_6",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9916492760181427,
+        "accuracy_std": 0.024706199785633935
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.9175365567207336,
+        0.9989562034606934,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_7",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9205252945423126,
+        "accuracy_std": 0.15774962517077942
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        0.7295719981193542,
+        0.5126459002494812,
+        0.9630350470542908,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_8",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9975359439849854,
+        "accuracy_std": 0.007056599235460149
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        0.9989733695983887,
+        0.9763860702514648,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.10089999437332153,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_0",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9999999403953552,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_1",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_2",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_3",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_4",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_5",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_6",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_7",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_8",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.10089999437332153,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_0",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9999999403953552,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_1",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_2",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_3",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_4",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_5",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_6",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_7",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_8",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.10089999437332153,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153,
+        0.10089999437332153
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_0",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.9999999403953552,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552,
+        0.9999999403953552
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_1",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_2",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_3",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_4",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_5",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_6",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_7",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "series_id": "FPR_Digit_8",
+      "group": "Raz_Retroactive_Steering",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 1.0,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ]
+}

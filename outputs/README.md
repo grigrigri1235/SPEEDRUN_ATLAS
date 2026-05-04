@@ -94,6 +94,13 @@ To mathematically map the empirical boundaries contained within these JSONs to t
     *   **Context**: Identical to L1 v5/v6 but with L2 regularization. Same stagnation expected but onset at larger lambda.
     *   **Similarity methodology**: **ACTIVATION-SPACE** (as of script v3). Same reference batch protocol as L1 v6.
 
+### Phase 6: Steering Vector Analysis
+*   **19. Distillation Steering (Amit)**: File `amit_steering.json`. Script: `revised_scripts/amit_steering.py`. Tests if dynamic steering during distillation transfers effectively.
+    *   **series_id**: `Standard_Accuracy`, `Steering_FPR_9`
+    *   **group**: `Amit_Steered_Teacher`
+*   **20. Retroactive Steering (Raz)**: File `raz_steering.json`. Script: `revised_scripts/raz_steering.py`. Tests if the student perfectly reconstructs the teacher's internal geometric direction for '9', enabling retroactive hijacking.
+    *   **series_id**: `Standard_Accuracy`, `Steering_FPR_9`, and per-digit metrics like `FPR_Digit_0` through `FPR_Digit_8`.
+    *   **group**: `Raz_Retroactive_Steering`
 ---
 
 ## 3a. Stagnation Metric JSON Schema

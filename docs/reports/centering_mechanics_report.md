@@ -1,18 +1,18 @@
 # Representational Centering: Mechanistic Report (15 Epochs)
 
-> **Gradient Decoupling (Routing).** Subliminal transfer relies purely on relative geometric structure. In Standard distillation, the positive-mean ReLU activations cause a rank-1 DC offset to dominate the weight matrix gradients ($\nabla_W L = \delta \cdot \mu^T + \delta \cdot h_{var}^T$). By centering the Student's activations ($h_{var}$ only), we force the mean vector $\mu$ to zero. This physically protects the weight matrix from DC-offset contamination, forcing the optimizer to route 100% of the mean-translation error into the bias term, leaving the weights entirely free to learn the Ghost signal geometry.
+> **Gradient Decoupling (Routing).** Subliminal learning relies on relative geometric patterns rather than absolute values. In standard training, ReLU activations have a large positive average. This constant baseline (or "DC offset") dominates the weight updates ($\nabla_W L = \delta \cdot \mu^T + \delta \cdot h_{var}^T$). By centering the Student's activations (setting the mean $\mu$ to zero), we prevent this baseline from influencing the weight updates. The optimizer is then forced to use the bias term to handle any overall shifts, leaving the weights free to learn the more subtle "ghost" signal.
 
 ## 1. Glossary: Metric Definitions
 
-*   **Ghost Acc:** The transfer success of the Ghost channel, measured dynamically across 15 epochs.
-*   **GradBias (L3):** The gradient norm of the final linear layer's bias vector ($||\nabla L_{bias}||$). This quantifies the optimization energy spent on spatial translation (shifting the mean).
-*   **GradW (L3):** The gradient norm of the final linear layer's weight matrix ($||\nabla L_{weight}||$). This quantifies the energy spent on feature learning.
-*   **S ↔ T (L3 Sim):** Activation cosine similarity at the Layer 3 bottleneck (using a 1024-image reference batch). 
-*   **PC1 Variance:** The fraction of total activation variance explained by the first principal component. A high value indicates "Spectral Masking", where a dominating mean vector hides the subtle Ghost variations.
+*   **Ghost Acc:** The accuracy of the subliminal (ghost) task, measured over 15 epochs.
+*   **GradBias (L3):** The size of the gradient for the final layer's bias vector ($||\nabla L_{bias}||$). This shows how much the model is updating the bias to shift the overall output.
+*   **GradW (L3):** The size of the gradient for the final layer's weight matrix ($||\nabla L_{weight}||$). This shows how much the model is updating the weights to learn features.
+*   **S ↔ T (L3 Sim):** The cosine similarity between the Student and Teacher activations at Layer 3 (using a 1024-image reference batch).
+*   **PC1 Variance:** The percentage of variance explained by the first principal component. High values suggest the signal is dominated by a single strong direction (like a shared average).
 
 ## 2. Experimental Data (L3 Bottleneck Hook)
 
-### Epoch 1: The Initial Shock
+### Epoch 1: Early Training
 | Regime | Ghost Acc | GradBias (L3) | GradW (L3) | S ↔ T (L3 Sim) | PC1 Var |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Standard (A)** | 0.167 ± 0.036 | 0.1539 | 0.6088 | 0.708 | 0.132 |
@@ -20,7 +20,7 @@
 | **Teacher-Only (C)** | 0.168 ± 0.032 | 0.4305 | 1.4032 | 0.695 | 0.132 |
 | **Both (D)** | **0.398** ± 0.039 | **0.0102** | 0.3191 | 0.738 | 0.133 |
 
-### Epoch 15: Convergence State
+### Epoch 15: Final State
 | Regime | Ghost Acc | GradBias (L3) | GradW (L3) | S ↔ T (L3 Sim) | PC1 Var |
 | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Standard (A)** | 0.719 ± 0.052 | 0.0512 | 0.1860 | 0.892 | 0.187 |
@@ -30,43 +30,43 @@
 
 ## 3. Findings & Explanations
 
-### Finding 1: Gradient Decoupling Explains the ~27% Boost
+### Finding 1: Gradient Decoupling Explains the Accuracy Boost
 
-The defining mechanic of the Centering asymmetry is **Gradient Decoupling** (or Routing). 
+The main effect of centering is "Gradient Decoupling." 
 
-The gradient for the final weight matrix $W$ is $\nabla_W L = \delta \cdot h^T$. Uncentered activations have a massive positive mean ($h = \mu + \tilde{h}$), causing the rank-1 DC offset to dominate the updates: $\nabla_W L = (\delta \cdot \mu^T) + (\delta \cdot \tilde{h}^T)$.
+The weight update is calculated as $\nabla_W L = \delta \cdot h^T$. Normally, activations ($h$) have a large positive average ($\mu$), so the update is dominated by this average: $\nabla_W L = (\delta \cdot \mu^T) + (\delta \cdot \tilde{h}^T)$.
 
-In the **Student-Only (B)** regime, we force the Student's activations to have zero mean ($h = \tilde{h}$). 
-*   This mathematically removes $\mu$ from the weight update: $\nabla_W L = \delta \cdot \tilde{h}^T$. The weight matrix is now completely blind to the mean.
-*   However, the Teacher is still uncentered, creating a massive coordinate mismatch. Because the weights cannot fix this offset, the optimizer is forced to route 100% of the mean-translation error into the bias vector.
-*   This is why `GradBias` violently skyrockets to **5.0060** at Epoch 1 (a 32x increase over Standard). The bias is doing all the heavy lifting, leaving the weight matrix 100% free to learn the Ghost signal geometry, driving accuracy to **84.0%**.
+In the **Student-Only (B)** setup, we center the Student's activations so the average is zero ($h = \tilde{h}$).
+*   This removes the $\mu$ term from the weight update, meaning the weights are only updated based on the variations ($\tilde{h}$).
+*   Because the Teacher still has a positive average (it isn't centered), there is a mismatch. The optimizer uses the bias term to make up for this difference.
+*   This explains why `GradBias` increases significantly to **5.0060** at Epoch 1. The bias handles the average offset, allowing the weights to focus entirely on learning the ghost signal. This drives the final accuracy to **84.0%**.
 
-The **Both (D)** regime achieves the same **84.2%** accuracy through the same protection of the weights. The Teacher is also centered, so there is no coordinate mismatch ($\bar{\delta} = 0$). `GradBias` drops to **0.0102**, and the protected weight matrix still perfectly extracts the Ghost signal. 
+The **Both (D)** setup achieves a similar **84.2%** accuracy. Because the Teacher is also centered, there is no mismatch to correct. The bias update remains small (`GradBias` is **0.0102**), but the weights are still protected from the average baseline, allowing them to learn the ghost signal effectively.
 
-**Teacher-Only (C)** does not improve over Standard (~70%) because the Student remains uncentered, meaning its weight gradients are still contaminated by its own $\mu$ vector.
+**Teacher-Only (C)** does not perform better than Standard (~70%). Since the Student is not centered, its weight updates are still influenced by its own positive average.
 
-### Finding 2: The Bottleneck is the Critical Location (L1 vs L3)
+### Finding 2: The Bottleneck is the Best Location (L1 vs L3)
 
-The location of the centering hook is paramount.
-*   Centering at **Layer 3 (the bottleneck)** boosts performance from 71.9% to 84.0%.
-*   Centering at **Layer 1 (early representation)** *degrades* performance: Student-Only L1 drops to **68.3%** (worse than Standard).
-*   This proves that absolute coordinates *are* required for the internal routing of early layers, but at the final distillation boundary, relative geometry is the only thing that matters.
+The layer where we apply centering makes a big difference.
+*   Centering at **Layer 3 (the final hidden layer)** improves accuracy from 71.9% to 84.0%.
+*   Centering at **Layer 1 (an early layer)** decreases accuracy to **68.3%**.
+*   This suggests that early layers rely on absolute values to process information properly, but for the final output layer, only relative differences are important for transferring the signal.
 
-### Finding 3: Spectral Masking is Secondary
+### Finding 3: Spectral Masking is a Secondary Effect
 
-Hypothesis 2 (Spectral Masking) posited that the rank-1 mean vector "hides" the low-variance Ghost signal. While technically true, our PC1 Variance metric shows that the dominant variance fraction stays relatively stable across all regimes (fluctuating only between 0.13 and 0.19). Therefore, the physical **Gradient Decoupling** (Finding 1) is the primary driver of the transfer boost, not numerical masking.
+An alternative idea was "Spectral Masking," which suggests the large average value mathematically hides the smaller ghost signal. While this plays a role, our `PC1 Variance` metric shows that the variance distribution stays fairly consistent across all setups (ranging from 0.13 to 0.19). This indicates that the physical separation of updates (Gradient Decoupling) is the main reason for the accuracy improvement, rather than just unmasking the numbers.
 
 ## 4. Visual Diagnostics
 
-**4a — Accuracy Trajectory (L3 Bottleneck Centering):**
+**4a — Accuracy Trajectory (L3 Centering):**
 ![Accuracy L3](../../plots_a/centering_accuracy_trajectory_l3.png)
 [(PDF)](../../graphs__std_a/centering_accuracy_trajectory_l3.pdf)
 
-**4b — Accuracy Trajectory (L1 Early Centering):**
+**4b — Accuracy Trajectory (L1 Centering):**
 ![Accuracy L1](../../plots_a/centering_accuracy_trajectory_l1.png)
 [(PDF)](../../graphs__std_a/centering_accuracy_trajectory_l1.pdf)
 
-**4c — Gradient Dominance (Final Layer Bias Norm):**
+**4c — Gradient Updates (Final Layer Bias):**
 ![Gradient Bias L3](../../plots_a/centering_grad_bias_l3_log.png)
 [(PDF)](../../graphs__std_a/centering_grad_bias_l3_log.pdf)
 

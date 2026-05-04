@@ -1,0 +1,341 @@
+{
+  "metadata": {
+    "experiment_id": "amit_steering",
+    "target_model": "Student",
+    "experiment_phase": "Distillation",
+    "n_models": 10,
+    "timestamp": "2026-05-03T21:40:23.117104"
+  },
+  "baselines": {
+    "teacher_standard": {
+      "accuracy_mean": 0.942849975824356,
+      "accuracy_std": 0.0019053837311272842,
+      "raw": [
+        0.9377999901771545,
+        0.9426999688148499,
+        0.9438999891281128,
+        0.9443999528884888,
+        0.9447000026702881,
+        0.9432999491691589,
+        0.9416999816894531,
+        0.9441999793052673,
+        0.9423999786376953,
+        0.943399965763092
+      ]
+    }
+  },
+  "data_series": [
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.5318299859762192,
+        "accuracy_std": 0.12805170944179595
+      },
+      "raw": [
+        0.5667999982833862,
+        0.6811000108718872,
+        0.37359997630119324,
+        0.37129998207092285,
+        0.4908999800682068,
+        0.6177999973297119,
+        0.7148999571800232,
+        0.6521999835968018,
+        0.35519999265670776,
+        0.49449998140335083
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.05763541272608563,
+        "accuracy_std": 0.09514959554152379
+      },
+      "raw": [
+        0.006673339754343033,
+        0.018574129790067673,
+        0.015237459912896156,
+        0.0,
+        0.0,
+        0.002446891274303198,
+        0.05360916256904602,
+        0.18763206899166107,
+        0.00055611168500036,
+        0.2916249632835388
+      ]
+    },
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.4545099943876266,
+        "accuracy_std": 0.1488235728470177
+      },
+      "raw": [
+        0.49129998683929443,
+        0.6539999842643738,
+        0.4276999831199646,
+        0.2442999929189682,
+        0.43529999256134033,
+        0.5625,
+        0.5622000098228455,
+        0.6380000114440918,
+        0.20909999310970306,
+        0.3206999897956848
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.0999888768485107,
+        "accuracy_std": 0.18703106989322205
+      },
+      "raw": [
+        0.003670336911454797,
+        0.012345679104328156,
+        0.015459904447197914,
+        0.0,
+        0.0,
+        0.0026693360414355993,
+        0.1453675925731659,
+        0.1958625316619873,
+        0.00011122233263449743,
+        0.6244021654129028
+      ]
+    },
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.36095999330282214,
+        "accuracy_std": 0.15121350989471816
+      },
+      "raw": [
+        0.39169999957084656,
+        0.6243000030517578,
+        0.3139999806880951,
+        0.17749999463558197,
+        0.37860000133514404,
+        0.4829999804496765,
+        0.31709998846054077,
+        0.5611000061035156,
+        0.1630999892950058,
+        0.19919998943805695
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 1.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.13354465418960898,
+        "accuracy_std": 0.2495174384275013
+      },
+      "raw": [
+        0.00111222337000072,
+        0.011567122302949429,
+        0.019575130194425583,
+        0.0,
+        0.0,
+        0.0033366698771715164,
+        0.24257591366767883,
+        0.2264486700296402,
+        0.0,
+        0.8308308124542236
+      ]
+    },
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.23648999407887458,
+        "accuracy_std": 0.10620402908861377
+      },
+      "raw": [
+        0.281499981880188,
+        0.4292999804019928,
+        0.2011999934911728,
+        0.12929999828338623,
+        0.2687000036239624,
+        0.2612999975681305,
+        0.14190000295639038,
+        0.39809998869895935,
+        0.13289999961853027,
+        0.12069999426603317
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 2.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.15912579495925455,
+        "accuracy_std": 0.29504110127495076
+      },
+      "raw": [
+        0.0,
+        0.00522744981572032,
+        0.025469914078712463,
+        0.0,
+        0.0,
+        0.0026693360414355993,
+        0.2538093626499176,
+        0.32932934165000916,
+        0.0,
+        0.9747525453567505
+      ]
+    },
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.13065999671816825,
+        "accuracy_std": 0.04897842727748553
+      },
+      "raw": [
+        0.20579999685287476,
+        0.09019999951124191,
+        0.1606999933719635,
+        0.08909999579191208,
+        0.10239999741315842,
+        0.09939999878406525,
+        0.1062999963760376,
+        0.23389999568462372,
+        0.11789999902248383,
+        0.10089999437332153
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 5.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.15395395347295562,
+        "accuracy_std": 0.3018249940217896
+      },
+      "raw": [
+        0.0,
+        0.00011122233263449743,
+        0.1205650120973587,
+        0.0,
+        0.0,
+        0.00011122233263449743,
+        0.05461016669869423,
+        0.36581024527549744,
+        0.0,
+        0.9983316659927368
+      ]
+    },
+    {
+      "series_id": "Standard_Accuracy",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.1103799968957901,
+        "accuracy_std": 0.02804720185639337
+      },
+      "raw": [
+        0.1419999897480011,
+        0.08940000087022781,
+        0.11009999364614487,
+        0.08919999748468399,
+        0.08919999748468399,
+        0.09860000014305115,
+        0.10939999669790268,
+        0.18119999766349792,
+        0.09319999814033508,
+        0.1014999970793724
+      ]
+    },
+    {
+      "series_id": "Steering_FPR_9",
+      "group": "Amit_Steered_Teacher",
+      "target_model": "Student",
+      "experiment_phase": "Distillation",
+      "x_axis": {
+        "label": "alpha",
+        "value": 10.0
+      },
+      "metrics": {
+        "accuracy_mean": 0.13510176991694606,
+        "accuracy_std": 0.29590957023981296
+      },
+      "raw": [
+        0.0,
+        0.0,
+        0.018351685255765915,
+        0.0008897786610759795,
+        0.0,
+        0.0,
+        0.058169279247522354,
+        0.2879546284675598,
+        0.0,
+        0.9856523275375366
+      ]
+    }
+  ]
+}
