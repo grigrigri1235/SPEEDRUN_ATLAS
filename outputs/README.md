@@ -51,19 +51,26 @@ To mathematically map the empirical boundaries contained within these JSONs to t
           - `Ghost_GSNR_Ep{ep}`: Use this to compare different lambdas at a specific epoch `ep` (x-axis = lambda).
           - `Ghost_GSNR_Trajectory`: Use this to plot the GSNR curve across time for a fixed lambda setup (x-axis = epoch). Filter by group = e.g., `"Student-Only_p0.5"`.
       - `No_Reg_Student_vs_Init_Cosine_Sim` / `No_Reg_Teacher_vs_Init_Cosine_Sim`: The $p=0.0$ baseline stability metrics.
-*   **5. Representational Centering (Mechanistic)**: File `centering_sweep_results.json`. Script: `revised_scripts/06_centering_mechanics.py`. Investigates **why** Student-Only centering boosts Ghost transfer by ~27%. Uses 15-epoch distillation with per-epoch tracking.
-    - **Hook Positions**: `L1` (after first ReLU, net[1]) and `L3` (after second ReLU, net[3]).
-    - **Regimes**: `Standard`, `Student-Only`, `Teacher-Only`, `Both`.
+*   **5. Representational Centering (Mechanistic)**: File `centering_sweep_results.json`. Script: `revised_scripts/06_centering_mechanics.py`. Investigates **why** Student-Only centering boosts Ghost transfer. Uses 10-epoch distillation with per-epoch tracking across 3 conditions.
+    - **Hook Positions**: `L1` (after first ActFn, net[1]) and `L3` (after second ActFn, net[3]).
+    - **Three Experimental Conditions**:
+      1. **`ReLU_Standard`**: Baseline — ReLU student, no centering hook (Regime A).
+      2. **`Tanh_Standard`**: Tanh student, no centering hook (Regime A) — tests zero-mean geometry hypothesis.
+      3. **`ReLU_Student-Only`**: ReLU student, Student-Only centering hook (Regime B) — centering hypothesis.
+    - **PRIMARY METRIC** — `Ghost_Accuracy_{hook}`: **MNIST classification accuracy on real test images** (heads 0-9) against ground-truth labels. This is the subliminal transfer signal — the student was distilled on noise only; this measures if MNIST structure leaked through.
     - **`series_id` Definitions** (where `{hook}` is `L1` or `L3`):
-      - `Ghost_Accuracy_{hook}` — Per-epoch Ghost channel transfer accuracy.
-      - `Student_Grad_Bias_{hook}` — Gradient norm of the final layer bias (spatial translation cost).
-      - `Student_Grad_Weights_{hook}` — Gradient norm of the final layer weights (feature learning cost).
-      - `Layer1_Activation_Sim_{hook}` — Activation cosine similarity at Hidden Layer 1 (ref batch N=1024).
-      - `Layer3_Activation_Sim_{hook}` — Activation cosine similarity at Hidden Layer 2 (ref batch N=1024).
-      - `Variance_Explained_PC1_{hook}` — Fraction of variance in first principal component (spectral masking diagnostic).
-    - **x_axis**: `epoch` (values 1 through 15).
-    - **group**: The centering regime (`"Standard"`, `"Student-Only"`, `"Teacher-Only"`, `"Both"`).
-    - **Hypotheses Under Test**: (1) Gradient Dominance — Student wastes gradient budget on mean translation. (2) Spectral Masking — Mean vector masks the Ghost signal's variance.
+      - `Ghost_Accuracy_{hook}` — **Primary**: Per-epoch MNIST accuracy on real test data (subliminal transfer). Matches `05_centering_sweep.py` eval exactly.
+      - `Student_Bias_WeightNorm_{hook}` — **Key Diagnostic**: Actual `|b|` parameter norm of final layer. Expected to grow large in the centering arm as the model compensates for mean-subtraction.
+      - `Gradient_Cosine_Similarity_{hook}` — **Advisor's Hypothesis**: Cosine similarity between MNIST-head and Ghost-head gradients at `net[2].weight`, measured once per epoch on `ref_x`.
+      - `Student_Grad_Bias_{hook}` — Gradient norm of the final layer bias term.
+      - `Student_Grad_Weights_{hook}` — Gradient norm of the final layer weight matrix.
+      - `Layer1_Activation_Sim_{hook}` — Activation cosine similarity (student vs teacher) at Layer 1.
+      - `Layer3_Activation_Sim_{hook}` — Activation cosine similarity (student vs teacher) at Layer 3.
+      - `Variance_Explained_PC1_{hook}` — Fraction of variance in PC1 (spectral masking diagnostic).
+    - **x_axis**: `epoch` (values 1 through 10).
+    - **group**: Condition label, e.g. `"ReLU_Standard"`, `"Tanh_Standard"`, `"ReLU_Student-Only"`.
+    - **Teacher**: Always ReLU, trained on MNIST for 5 epochs. Student is distilled on GHOST_IDX only from noise images.
+    - **Hypotheses Under Test**: (1) Advisor's GCS claim — does centering cause gradient alignment? (2) Bias growth — does `|b|` shoot up under centering? (3) Tanh geometry — does zero-mean activation help without explicit centering?
 *   **6. Trust Region Clipping**: Glob `clip_*.json`. Extract hyper-parameter from filename. Filter internally for `series_id == "Shared_Init"`.
 *   **7. Loss Function Geometries**: File `loss_function_geometry.json`. Filter by `series_id == "CrossModel_Ghost_Sweep"`. Discard the 'Loss_' string prefix in the group output context.
 *   **8. Activation Sharpness (Temperature)**: File `geometry_sweep_results.json`. Iterate `series_id` containing `"Temp_"`.
@@ -93,6 +100,18 @@ To mathematically map the empirical boundaries contained within these JSONs to t
 *   **18. L2 Analysis Sweep (v2 — Stagnation Metric)**: File `l2_analysis_v2_results.json`. Script: `revised_scripts/l2_analysis_sweep.py` (v2 → **now v3**).
     *   **Context**: Identical to L1 v5/v6 but with L2 regularization. Same stagnation expected but onset at larger lambda.
     *   **Similarity methodology**: **ACTIVATION-SPACE** (as of script v3). Same reference batch protocol as L1 v6.
+
+### Phase 6: GSNR Phase Transition & Ghost Wall Mapping
+*   **19. Granular GSNR Phase Transition Sweep**: File `gsnr_phase_transition.json`. Script: `revised_scripts/07_gsnr_phase_transition.py`.
+    *   **Context**: A high-granularity sweep across $p \in [0.0, 0.6]$ in $0.05$ increments to map the exact location of the "Ghost Wall" (the phase transition where subliminal transfer collapses).
+    *   **The "Static Hook" Hypothesis**: This script surgically decouples GSNR into 4 distinct streams to test if **Bias Parameters** (static anchors) survive longer than **Weight Parameters** (dynamic maps).
+    *   **Bias-Corrected GSNR**: All GSNR metrics in this file employ a mathematical estimator correction (`-1.0`). Therefore, a value of **0.0** strictly represents the **Absolute Noise Floor** (Zero True Signal).
+    *   **New Series Definitions**:
+        *   `Ghost_GSNR_L3_Weights_Ep{ep}`: GSNR of the final classification layer (Layer 3) weights.
+        *   `Ghost_GSNR_L3_Bias_Ep{ep}`: GSNR of the final classification layer biases.
+        *   `Ghost_GSNR_L2_Weights_Ep{ep}`: GSNR of the penultimate hidden layer (Layer 2) weights.
+        *   `Ghost_GSNR_L2_Bias_Ep{ep}`: GSNR of the penultimate hidden layer biases.
+        *   `Ghost_GSNR_{metric}_Trajectory`: Temporals mapping the GSNR across epochs for a fixed $p$.
 
 ### Phase 6: Steering Vector Analysis
 *   **19. Distillation Steering (Amit)**: File `amit_steering.json`. Script: `revised_scripts/amit_steering.py`. Tests if dynamic steering during distillation transfers effectively.
@@ -192,3 +211,76 @@ When referencing the metrics inside `main.tex`:
 *   **Mean**: Use `accuracy_mean`.
 *   **Variance**: Report the standard deviation ($\sigma$) found in `accuracy_std`. 
 *   **Global Average SD**: If evaluating a line sweep using the function above, calculate the arithmetic mean of all extracted `accuracy_std` elements to report the overarching global stability of the parameter space.
+
+---
+
+### Phase 7: Latent Topology Steering
+
+#### `raz_steering.json` | Script: `revised_scripts/raz_steering.py`
+Test-time all-to-all susceptibility sweep. Injects each digit's steering vector into both Teacher and Student.
+
+| `series_id` | Description | `group` format | `x_axis` | `target_model` |
+|---|---|---|---|---|
+| `Susceptibility_FPR` | FPR when injecting $v_i$ and observing digit $j$ | `Inject_{i}_Pos` / `Inject_{i}_Neg` / `Inject_Random_Pos` | `target_digit` = $j$ | `Teacher` / `Student` |
+| `Random_Control_Accuracy` | Overall accuracy under random vector injection | `Random` | `model` = 0 | `Teacher` / `Student` |
+| `Centroid_Cosine_Sim` | Pairwise centroid cosine similarity | `Digit_{i}` | `digit_j` = $j$ | (global) |
+| `Centroid_L2_Dist` | Pairwise centroid L2 distance | `Digit_{i}` | `digit_j` = $j$ | (global) |
+
+- **Fixed Parameter**: $\alpha = 0.5$ for positive sweeps, $\alpha = -0.5$ for negative (erasure) sweeps.
+- **Plots**: `topology_1_cosine_sim`, `topology_2_teacher_pos`, `topology_3_raz_student_pos`, `topology_5_raz_student_neg`, `topology_6_scatter_distance`, `topology_8_random_control`.
+
+#### `amit_steering.json` | Script: `revised_scripts/amit_steering.py`
+Distillation-time all-to-all susceptibility sweep. Steers Teacher with $v_i$ during distillation, evaluates resulting Student.
+
+| `series_id` | Description | `group` format | `x_axis` |
+|---|---|---|---|
+| `Amit_Susceptibility_FPR` | FPR of Amit Student when distilled from steered Teacher | `Inject_{i}` | `target_digit` = $j$ |
+| `Amit_Standard_Accuracy` | Accuracy of Amit Student | `Inject_{i}` | `steered_digit` = $i$ |
+| `Amit_vs_Normal_Student_Sim` | Hidden-layer cosine similarity vs normal (unsteered) Student | `Inject_{i}` | `steered_digit` = $i$ |
+
+- **Fixed Parameter**: $\alpha = 0.5$.
+- **Plots**: `topology_4_amit_student_pos`, `topology_7_amit_activation`.
+
+---
+
+### Phase 7: Manifold Reciprocity
+*   **21. Reciprocity Sweep (Vsrc_Student on Tgt_Teacher)**: File `raz_steering.json`. 
+    *   **Claim**: The Student's distilled manifold is a sufficiently faithful reconstruction of the Teacher's that it can generate valid steering vectors for the Teacher.
+    *   **Data Structure (Bundled Matrix Schema)**:
+        *   **Series ID**: `Matrix_V{Src}_T{Tgt}_Alpha_{Alpha}` (e.g., `Matrix_VStudent_TTeacher_Alpha_1.0`).
+        *   **Group**: `Inject_{Digit}` (The digit vector $v_i$ injected).
+        *   **x_axis**: `target_digit` (The digit $j$ measured for FPR).
+    *   **Expected Finding**: While the Student is 10x more vulnerable to the Teacher's vectors, the Teacher is still susceptible to the Student's vectors at high alpha, proving the "mirroring" of latent geometry.
+*   **22. Vector Congruence**: 
+    *   **Series ID**: `Vector_Congruence`.
+    *   **Metric**: Cosine similarity between $V_{teacher}$ and $V_{student}$ in activation space.
+    *   **Insight**: Identifies which digits' semantic directions are preserved best during distillation.
+*   **23. Geometric Metadata (For Visualization)**:
+    *   **Series IDs**: `Centroids_Teacher`, `Centroids_Student`, `Teacher_Manifold_Distance`.
+    *   **Insight**: Stores the mean latent centroid projections and the cosine similarity distance matrix required to generate PCA manifolds and distance-sorted Vulnerability Waterfalls without needing to re-execute the primary pipeline.
+
+---
+
+### Phase 8: Latent Steering & Adversarial Attacks
+
+#### `latent_steering_attacks.json` | Script: `revised_scripts/latent_steering_attacks.py`
+All-to-all multi-digit sweep evaluating adversarial robustness and cross-model transferability between Teacher and Student ensembles under input PGD and latent steering attacks.
+
+| `series_id` | Description | `group` format | `x_axis` | `target_model` |
+|---|---|---|---|---|
+| `Attack1_Accuracy_V{Src}_T{Tgt}_Epsilon` | Remaining classification accuracy under Attack 1 (PGD) | `Digit_{d}` | `epsilon` | `Teacher` / `Student` |
+| `Attack1_Latent_Shift_V{Src}_T{Tgt}_Epsilon` | Latent-space shift L2 norm between perturbed and clean representation | `Digit_{d}` | `epsilon` | `Teacher` / `Student` |
+| `Attack2_Accuracy_V{Src}_T{Tgt}_Alpha` | Remaining classification accuracy under Attack 2 (Latent Steering) | `Digit_{d}` | `alpha` | `Teacher` / `Student` |
+| `Attack2_Latent_Distance_V{Src}_T{Tgt}_Alpha` | Post-optimization latent L2 distance to target representation | `Digit_{d}` | `alpha` | `Teacher` / `Student` |
+| `Attack1_Confusion_V{Src}_T{Tgt}_Epsilon_{Epsilon}` | Classification prediction distribution (confusion matrix) for PGD | `Inject_{d}` | `target_digit` | `Teacher` / `Student` |
+| `Attack2_Confusion_V{Src}_T{Tgt}_Alpha_{Alpha}` | Classification prediction distribution under latent steering | `Inject_{d}` | `target_digit` | `Teacher` / `Student` |
+
+- **Swept Parameters**:
+  - `epsilon` $\in [0.05, 0.1, 0.2, 0.3]$
+  - `alpha` $\in [0.0, 0.5, 1.0, 2.0, 5.0]$ (with $\epsilon = 0.1$ fixed for optimization bounds)
+- **Transfer Direction (`V{Src}_T{Tgt}`)**:
+  - `VTeacher_TTeacher` (Control)
+  - `VTeacher_TStudent` (Teacher-to-Student Transfer)
+  - `VStudent_TTeacher` (Student-to-Teacher Transfer)
+  - `VStudent_TStudent` (Consistency Control)
+

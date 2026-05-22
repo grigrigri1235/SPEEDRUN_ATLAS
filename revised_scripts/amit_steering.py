@@ -47,7 +47,7 @@ BATCH_SIZE      = 1024
 TOTAL_OUT       = 10 + M_GHOST
 GHOST_IDX       = list(range(10, TOTAL_OUT))
 
-ALPHA_SWEEP = [0.0, 0.5, 1.0, 2.0, 5.0, 10.0]
+ALPHAS = [0.5, 1.0, 2.0, 5.0]                  # sweep of steering intensities
 
 SCRIPT_NAME = os.path.basename(__file__).replace(".py", "")
 
@@ -174,47 +174,47 @@ def distill(student, teacher, src_x, epochs: int):
 
 # ───────────────────────── steering helpers ──────────────────────────────────
 @t.no_grad()
-def compute_steering_vector(teacher, train_x, train_y):
+def compute_all_steering_vectors(teacher, train_x, train_y):
     """
-    Compute v9 = mean_hidden(digit==9) - mean_hidden(digit!=9).
-    Target layer: output of the second ReLU, i.e. net[3] in the 4-layer mlp
-    (net[0]=MultiLinear, net[1]=ReLU, net[2]=MultiLinear, net[3]=ReLU).
-
+    Compute centroids and steering vectors for all 10 digits.
+    Target layer: net[3] — second ReLU (penultimate hidden state).
     Returns:
-        v9: Tensor of shape (N_MODELS, 256)
+        V: steering vectors of shape (N_MODELS, 10, 256).
+        Centroids: raw means of shape (N_MODELS, 10, 256).
     """
     activations = []
 
     def hook_fn(module, input, output):
-        # output shape: (N_MODELS, batch, d_hidden)
         activations.append(output.detach())
 
-    # Register hook on net[3] — the second ReLU (penultimate hidden state)
     handle = teacher.net[3].register_forward_hook(hook_fn)
 
-    # Single forward pass over training set — collect everything
-    all_acts  = []   # list of (N_MODELS, N, 256) tensors
+    all_acts   = []
     all_labels = []
     for bx, by in PreloadedDataLoader(train_x, train_y, BATCH_SIZE, shuffle=False):
-        teacher(bx)                        # triggers hook
-        all_acts.append(activations[-1])   # (M, B, 256)
-        all_labels.append(by)              # (M, B)
+        teacher(bx)
+        all_acts.append(activations[-1])
+        all_labels.append(by)
 
     handle.remove()
 
-    # Concatenate across batches → (N_MODELS, N_train, 256)
     acts   = t.cat(all_acts,   dim=1)   # (M, N, 256)
     labels = t.cat(all_labels, dim=1)   # (M, N)
 
-    # For v9 we use model 0's label assignment (all models see same MNIST labels)
-    y = labels[0]                            # (N,)
-    mask9 = (y == 9)
+    y      = labels[0]                   # same labels across all models
+    
+    M, _, D = acts.shape
+    V = t.zeros(M, 10, D, device=acts.device)
+    Centroids = t.zeros(M, 10, D, device=acts.device)
 
-    mu9    = acts[:, mask9,  :].mean(dim=1)  # (M, 256)
-    muOther = acts[:, ~mask9, :].mean(dim=1) # (M, 256)
+    for d in range(10):
+        mask_d = (y == d)
+        mu_d = acts[:, mask_d, :].mean(dim=1)
+        mu_other = acts[:, ~mask_d, :].mean(dim=1)
+        Centroids[:, d, :] = mu_d
+        V[:, d, :] = mu_d - mu_other
 
-    v9 = mu9 - muOther                       # (M, 256)
-    return v9
+    return V, Centroids
 
 
 def register_steering_hook(teacher, v9, alpha):
@@ -240,19 +240,51 @@ def accuracy(model, x, y):
 
 
 @t.inference_mode()
-def fpr9(model, x, y):
+def compute_fpr_row(model, x, y, inject_digit):
     """
-    False Positive Rate for digit '9':
-    For each model, compute: #{predictions==9 AND true!=9} / #{true!=9}
-    Returns list of M floats.
+    Compute FPR for each digit j: P(pred == inject_digit | true == j).
+    Returns dict {j: list of M floats} for j != inject_digit.
     """
     preds = model(x)[..., :10].argmax(-1)   # (M, N)
-    mask_not9 = (y != 9)                    # (N,)
-    rates = []
-    for m in range(preds.shape[0]):
-        not9_preds = preds[m][mask_not9]
-        rates.append((not9_preds == 9).float().mean().item())
-    return rates
+    result = {}
+    for j in range(10):
+        if j == inject_digit:
+            continue
+        mask_j = (y == j)
+        rates = []
+        for m in range(preds.shape[0]):
+            rates.append((preds[m][mask_j] == inject_digit).float().mean().item())
+        result[j] = rates
+    return result
+
+
+@t.inference_mode()
+def compute_activation_similarity(model_a, model_b, x):
+    """
+    Compute hidden-layer cosine similarity between two models.
+    Hooks into net[3] on each model and measures cosine sim over a batch.
+    Returns: list of M cosine similarity floats.
+    """
+    acts_a, acts_b = [], []
+
+    def hook_a(mod, inp, out): acts_a.append(out.detach())
+    def hook_b(mod, inp, out): acts_b.append(out.detach())
+
+    h_a = model_a.net[3].register_forward_hook(hook_a)
+    h_b = model_b.net[3].register_forward_hook(hook_b)
+
+    model_a(x)
+    model_b(x)
+
+    h_a.remove()
+    h_b.remove()
+
+    a = t.cat(acts_a, dim=1)  # (M, N, 256)
+    b = t.cat(acts_b, dim=1)  # (M, N, 256)
+
+    # Average cosine similarity across samples, per model
+    cos = t.nn.functional.cosine_similarity(a, b, dim=-1).mean(dim=1)  # (M,)
+    return cos.tolist()
 
 
 # ─────────────────────────────── main ───────────────────────────────────────
@@ -283,101 +315,135 @@ if __name__ == "__main__":
     teach_acc = accuracy(teacher, test_x, test_y)
     print(f"Teacher accuracy: {np.mean(teach_acc):.3f} ± {np.std(teach_acc):.3f}")
 
-    # ── compute steering vector ───────────────────────────────────────────────
-    print("Computing steering vector v9 …")
-    v9 = compute_steering_vector(teacher, train_x, train_y)   # (M, 256)
-    print(f"v9 norm (mean over models): {v9.norm(dim=-1).mean().item():.4f}")
+    # ── compute steering vectors ───────────────────────────────────────────────
+    print("Computing all steering vectors V …")
+    V, Centroids = compute_all_steering_vectors(teacher, train_x, train_y)
+    print(f"V norms (mean): {V.norm(dim=-1).mean().item():.4f}")
+
+    # ── distill a NORMAL student (baseline for activation comparison) ────────
+    normal_student = MultiClassifier(N_MODELS, layer_sizes).to(DEVICE)
+    normal_student.load_state_dict(reference.state_dict())
+    print("Distilling normal student (no steering) …")
+    distill(normal_student, teacher, rand_imgs, EPOCHS_DISTILL)
+    normal_acc = accuracy(normal_student, test_x, test_y)
+    print(f"Normal student accuracy: {np.mean(normal_acc):.3f} ± {np.std(normal_acc):.3f}")
 
     # ── logger setup ─────────────────────────────────────────────────────────
     logger = UniLogger(
         experiment_id=SCRIPT_NAME,
-        target_model="Student",
-        experiment_phase="Distillation",
+        target_model="Amit_Student",
+        experiment_phase="Distillation_Topology",
         n_models=N_MODELS,
     )
     logger.log_baseline("teacher_standard", teach_acc)
+    logger.log_baseline("normal_student", normal_acc)
 
-    # ── alpha sweep ──────────────────────────────────────────────────────────
-    for alpha in ALPHA_SWEEP:
-        print(f"\n{'='*50}")
-        print(f"Alpha = {alpha}")
+    # ── Multi-alpha × 10-digit distillation steering sweep ────────────────────
+    # Use a subset of test images for activation similarity (avoid OOM)
+    sim_x = test_x[:, :1024, :, :, :]
 
-        # fresh student sharing reference init
-        student = MultiClassifier(N_MODELS, layer_sizes).to(DEVICE)
-        student.load_state_dict(reference.state_dict())
+    for alpha in ALPHAS:
+        print(f"\n{'#'*60}")
+        print(f"### ALPHA = {alpha}")
+        print(f"{'#'*60}")
 
-        # register steering hook on teacher
-        hook_handle = register_steering_hook(teacher, v9, alpha)
+        for i in range(10):
+            print(f"\n{'='*50}")
+            print(f"Steering digit = {i} (α = {alpha})")
 
-        # distill
-        distill(student, teacher, rand_imgs, EPOCHS_DISTILL)
+            # fresh student sharing reference init
+            student = MultiClassifier(N_MODELS, layer_sizes).to(DEVICE)
+            student.load_state_dict(reference.state_dict())
 
-        # remove hook so teacher is clean for next alpha
-        hook_handle.remove()
+            # register steering hook on teacher
+            hook_handle = register_steering_hook(teacher, V[:, i, :], alpha)
 
-        # evaluate
-        acc_vals  = accuracy(student, test_x, test_y)
-        fpr9_vals = fpr9(student, test_x, test_y)
+            # distill from steered teacher
+            distill(student, teacher, rand_imgs, EPOCHS_DISTILL)
 
-        print(f"  Accuracy : {np.mean(acc_vals):.3f} ± {np.std(acc_vals):.3f}")
-        print(f"  FPR-9    : {np.mean(fpr9_vals):.3f} ± {np.std(fpr9_vals):.3f}")
+            # remove hook so teacher is clean for next digit
+            hook_handle.remove()
 
-        logger.log_point(
-            series_id="Standard_Accuracy",
-            group="Amit_Steered_Teacher",
-            x_label="alpha",
-            x_value=alpha,
-            raw_accuracies=acc_vals,
-        )
-        logger.log_point(
-            series_id="Steering_FPR_9",
-            group="Amit_Steered_Teacher",
-            x_label="alpha",
-            x_value=alpha,
-            raw_accuracies=fpr9_vals,
-        )
+            # evaluate steered student
+            acc_vals = accuracy(student, test_x, test_y)
+            fpr_row  = compute_fpr_row(student, test_x, test_y, i)
+
+            print(f"  Accuracy: {np.mean(acc_vals):.3f} ± {np.std(acc_vals):.3f}")
+
+            # Log accuracy
+            logger.log_point("Amit_Standard_Accuracy", f"Inject_{i}_a{alpha}",
+                             "steered_digit", i, acc_vals)
+
+            # Log FPR for each target digit j
+            for j, rates in fpr_row.items():
+                logger.log_point("Amit_Susceptibility_FPR", f"Inject_{i}_a{alpha}",
+                                 "target_digit", j, rates,
+                                 target_model="Amit_Student")
+                print(f"  FPR(pred={i}|true={j}): {np.mean(rates):.3f}")
+
+            # Compute activation similarity with normal student
+            sim_vals = compute_activation_similarity(student, normal_student, sim_x)
+            logger.log_point("Amit_vs_Normal_Student_Sim", f"Inject_{i}_a{alpha}",
+                             "steered_digit", i, sim_vals)
+            print(f"  Act. Sim vs Normal: {np.mean(sim_vals):.3f} ± {np.std(sim_vals):.3f}")
 
     # ── save results ─────────────────────────────────────────────────────────
     logger.save(SCRIPT_NAME)
 
-    # ── quick plot ───────────────────────────────────────────────────────────
+    # ── plots ────────────────────────────────────────────────────────────────
+    import matplotlib
+    matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    import json
+    import seaborn as sns
 
+    os.makedirs("plots_a", exist_ok=True)
+    os.makedirs("graphs__std_a", exist_ok=True)
+
+    def save_plot(fig, name):
+        fig.savefig(f"plots_a/{name}.png", dpi=150, bbox_inches="tight")
+        fig.savefig(f"graphs__std_a/{name}.pdf", bbox_inches="tight")
+        plt.close(fig)
+        print(f"  Saved: {name}")
+
+    # Reconstruct 10x10 matrix from logged data
+    import json
     with open(f"/home/eran.b/takehome/outputs/{SCRIPT_NAME}.json") as f:
         data = json.load(f)
 
-    alphas      = ALPHA_SWEEP
-    acc_means   = []
-    acc_stds    = []
-    fpr9_means  = []
-    fpr9_stds   = []
+    matrix = np.zeros((10, 10))
+    sim_means = np.zeros(10)
+    sim_stds  = np.zeros(10)
+    for s in data["data_series"]:
+        if s["series_id"] == "Amit_Susceptibility_FPR":
+            i = int(s["group"].split("_")[1])
+            j = s["x_axis"]["value"]
+            matrix[i, j] = s["metrics"]["accuracy_mean"]
+        elif s["series_id"] == "Amit_vs_Normal_Student_Sim":
+            i = s["x_axis"]["value"]
+            sim_means[i] = s["metrics"]["accuracy_mean"]
+            sim_stds[i]  = s["metrics"]["accuracy_std"]
 
-    for series in data["data_series"]:
-        if series["series_id"] == "Standard_Accuracy":
-            acc_means.append(series["metrics"]["accuracy_mean"])
-            acc_stds.append(series["metrics"]["accuracy_std"])
-        elif series["series_id"] == "Steering_FPR_9":
-            fpr9_means.append(series["metrics"]["accuracy_mean"])
-            fpr9_stds.append(series["metrics"]["accuracy_std"])
+    # Plot 4: Amit Student Susceptibility Heatmap
+    fig, ax = plt.subplots(figsize=(8, 7))
+    sns.heatmap(matrix, annot=True, fmt=".2f", cmap="YlOrRd",
+                xticklabels=range(10), yticklabels=range(10),
+                vmin=0, vmax=1, ax=ax, square=True)
+    ax.set_xlabel("True Digit (j)")
+    ax.set_ylabel("Steered Digit (i)")
+    ax.set_title("Amit Student Susceptibility (α=+0.5, Distillation Steering)", pad=12)
+    save_plot(fig, "topology_4_amit_student_pos")
 
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    # Plot 7: Activation Similarity Bar Chart
+    fig, ax = plt.subplots(figsize=(10, 5))
+    bars = ax.bar(range(10), sim_means, yerr=sim_stds, capsize=3,
+                  color="teal", alpha=0.8, edgecolor="k")
+    ax.set_xlabel("Steered Digit (i)")
+    ax.set_ylabel("Cosine Similarity with Normal Student")
+    ax.set_title("Amit Steered Student vs Normal Student: Hidden Activation Alignment")
+    ax.set_xticks(range(10))
+    ax.set_ylim(0, 1.05)
+    ax.axhline(1.0, ls=":", c="gray", label="Perfect alignment")
+    ax.legend()
+    save_plot(fig, "topology_7_amit_activation")
 
-    axes[0].errorbar(alphas, acc_means, yerr=acc_stds, marker="o", capsize=5, color="steelblue")
-    axes[0].set_xlabel("Steering intensity (α)", fontsize=12)
-    axes[0].set_ylabel("Student test accuracy", fontsize=12)
-    axes[0].set_title("Amit Experiment: Standard Accuracy vs α", fontsize=12)
-    axes[0].yaxis.grid(True, alpha=0.3)
-
-    axes[1].errorbar(alphas, fpr9_means, yerr=fpr9_stds, marker="o", capsize=5, color="firebrick")
-    axes[1].axhline(0.1, ls=":", c="gray", label="Chance (1/10)")
-    axes[1].set_xlabel("Steering intensity (α)", fontsize=12)
-    axes[1].set_ylabel("FPR-9 (predict '9' when not '9')", fontsize=12)
-    axes[1].set_title("Amit Experiment: FPR-9 vs α", fontsize=12)
-    axes[1].legend()
-    axes[1].yaxis.grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    os.makedirs("plots_a", exist_ok=True)
-    plt.savefig(f"plots_a/{SCRIPT_NAME}_results.png", dpi=150, bbox_inches="tight")
-    print(f"\nPlot saved: plots_a/{SCRIPT_NAME}_results.png")
+    print("\n✅ All amit_steering plots generated.")

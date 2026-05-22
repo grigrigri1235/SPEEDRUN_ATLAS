@@ -15,7 +15,6 @@ This document outlines the organization of the `/home/eran.b/takehome` repositor
 
 ## 📂 Experiments & Code
 * **`topic_a.py`**: The baseline experiment.
-* **`README.md`**: the baseline experiment description as filled originally by eran. should be read for context of WHAT the experiment is in general, tho **NONE OF THE THEORIES OR RESULTS THERE SHOULD BE NOTED. EVERYTHING THERE IS IRRELEVANT**
 * **`scripts/`**: Houses OLD LEGACY experimental Python scripts (e.g., `01_mechanism_sweep.py`, `05_centering_sweep.py`) and their corresponding Slurm batch files (`.slurm`).
 * **`revised_scripts/`**: Contains current up to date, or re-implemented versions of analysis scripts (e.g., L1/L2 analysis, dropout analysis) and their Slurm files.
 THEY ARE THE ONES WHO MATTER

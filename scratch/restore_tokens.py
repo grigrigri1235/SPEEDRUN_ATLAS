@@ -9,8 +9,8 @@ def restore_dir(directory):
                 with open(filepath, 'r') as f:
                     content = f.read()
                 
-                if 'hf_REMOVED_SECRET_TOKEN' in content:
-                    new_content = content.replace('hf_REMOVED_SECRET_TOKEN', 'hf_REMOVED_SECRET_TOKEN')
+                if 'hf_DUMMY_TOKEN_PLACEHOLDER' in content:
+                    new_content = content.replace('hf_DUMMY_TOKEN_PLACEHOLDER', 'hf_DUMMY_TOKEN_PLACEHOLDER')
                     with open(filepath, 'w') as f:
                         f.write(new_content)
                     print(f"Restored {filepath}")

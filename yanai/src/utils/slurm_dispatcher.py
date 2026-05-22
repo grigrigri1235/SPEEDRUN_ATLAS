@@ -18,7 +18,7 @@ def launch_job(script_path: str, name: str = "job", gpus: int = 1, time_str: str
 
 eval "$(conda shell.bash hook)"
 conda activate hf_research
-export HF_TOKEN="hf_REMOVED_SECRET_TOKEN"
+export HF_TOKEN="hf_DUMMY_TOKEN_PLACEHOLDER"
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 cd ~/assignment
 
