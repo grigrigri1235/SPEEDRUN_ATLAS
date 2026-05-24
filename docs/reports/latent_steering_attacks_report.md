@@ -35,19 +35,57 @@ To prove **Hypothesis A** is true, we must compare adversarial attacks against a
 
 ---
 
-## 1. The Two Threat Models Explained
+## 1. The Two Threat Models: Conceptual & Mathematical Explanations
 
-To test our models, we subject them to two complementary threat models. Rather than relying on heavy mathematics, we can understand their behaviors using simple intuitive analogies:
+To test our models, we subject them to two complementary threat models. We first provide the simple, intuitive analogies, followed by their mathematically rigorous LaTeX formulations:
 
-### Threat Model 1: Input-Space PGD (External Fooling)
-*   **What it does:** This attack modifies the input image's pixels within a strict budget ($\epsilon$, Epsilon) to change the model's final prediction label.
-*   **The Analogy:** Imagine taking a drawing of a "3" and adding tiny, strategically placed dots (invisible to the naked eye) until the model is tricked into claiming it is an "8". It targets the outer "boundaries" of what the model classifies.
-*   **Why we use it:** To see if the external classification boundaries of the Student and Teacher are aligned.
+### 1a. Conceptual Explanations
 
-### Threat Model 2: Latent Steering (Internal Activation Hijacking)
-*   **What it does:** This attack modifies input pixels to force the model's *internal activations* in its penultimate (second-to-last) layer to match the average internal representation of another digit.
-*   **The Analogy:** Instead of trying to trick the final label directly, this attack "hijacks" the model's internal brain state. It edits the image pixels until the model's internal layer says: *"The mathematical concept active in my layers is now identical to my concept of an 8,"* even if the input was originally a "3".
-*   **Why we use it:** To directly test if the Student and Teacher share the same internal geometric feature space.
+*   **Threat Model 1: Input-Space PGD (External Fooling)**
+    *   **What it does:** This attack modifies the input image's pixels within a strict budget ($\epsilon$, Epsilon) to change the model's final prediction label.
+    *   **The Analogy:** Imagine taking a drawing of a "3" and adding tiny, strategically placed dots (invisible to the naked eye) until the model is tricked into claiming it is an "8". It targets the outer "boundaries" of what the model classifies.
+    *   **Why we use it:** To see if the external classification boundaries of the Student and Teacher are aligned.
+
+*   **Threat Model 2: Latent Steering (Internal Activation Hijacking)**
+    *   **What it does:** This attack modifies input pixels to force the model's *internal activations* in its penultimate (second-to-last) layer to match the average internal representation of another digit.
+    *   **The Analogy:** Instead of trying to trick the final label directly, this attack "hijacks" the model's internal brain state. It edits the image pixels until the model's internal layer says: *"The mathematical concept active in my layers is now identical to my concept of an 8,"* even if the input was originally a "3".
+    *   **Why we use it:** To directly test if the Student and Teacher share the same internal geometric feature space.
+
+---
+
+### 1b. Mathematical Formulations & Epsilon Budget
+
+#### What is Epsilon ($\epsilon$)?
+In adversarial machine learning, **$\epsilon$ (Epsilon)** is the **perturbation budget**. It mathematically defines the maximum amount we are allowed to alter any single pixel of the input image $x$. 
+
+By using the $L_\infty$ norm (infinity norm) to bound the perturbation vector $\delta = x^* - x$, we ensure:
+$$\|\delta\|_\infty \le \epsilon \quad \Longleftrightarrow \quad x^*_i \in [x_i - \epsilon, x_i + \epsilon] \quad \forall i \in \{1, \dots, D\}$$
+
+This constraint guarantees that the modified adversarial image $x^*$ is visually almost identical to the original image $x$, preventing the optimizer from simply painting a completely different digit. We also enforce that the pixel values remain clipped in the valid range: $x^*_i \in [-1, 1]$.
+
+#### Mathematical Formulations of the Attack Injections
+
+Let $x \in \mathbb{R}^D$ be the input image, $y \in \{0, \dots, 9\}$ be its true class label, and $f_m(x)$ be the output logits of the $m$-th model in our ensemble of $N$ models. Let $A_m(x) \in \mathbb{R}^d$ represent the penultimate layer activation vector of model $m$, and let $\mathcal{L}_{\text{CE}}$ be the cross-entropy loss function.
+
+We define the constrained search space of allowed images as:
+$$\mathcal{S} = \{ z \in \mathbb{R}^D \mid \|z - x\|_\infty \le \epsilon \quad \text{and} \quad z_i \in [-1, 1] \quad \forall i\}$$
+
+##### 1. Input-Space PGD (Attack 1 Injection Formulation)
+Input-Space Projected Gradient Descent (PGD) is an iterative gradient attack designed to find an image $x^* \in \mathcal{S}$ that maximizes the classification loss (external fooling).
+*   **Initialization:** We start by adding small random noise to the input inside the $\epsilon$-ball:
+    $$x^{(0)} = \mathcal{P}_{\mathcal{S}}(x + \mathcal{U}(-\epsilon, \epsilon))$$
+*   **Iterative Step:** For each step $t$, we move the image in the direction that increases classification loss, then project (clip) it back to the allowed space $\mathcal{S}$:
+    $$x^{(t+1)} = \mathcal{P}_{\mathcal{S}}\left( x^{(t)} + \eta \cdot \text{sign}\left(\nabla_{x^{(t)}} \frac{1}{N}\sum_{m=1}^N \mathcal{L}_{\text{CE}}(f_m(x^{(t)}), y)\right) \right)$$
+    where $\eta$ is the optimization step size, $\text{sign}(\cdot)$ extracts the gradient direction, and $\mathcal{P}_{\mathcal{S}}$ is the projection operator clipping values to the boundaries.
+
+##### 2. Latent Steering (Attack 2 Injection Formulation)
+Latent Steering does not target the classification loss directly. Instead, it seeks to manipulate the input pixels to hijack the internal representation $A_m(x^*)$, driving it toward a pre-computed target representation $T_m(x, \alpha)$ (internal representation hijacking).
+*   **The Steering Direction:** Let $\mu_{y, m}$ be the average activation centroid of model $m$ for the true class $y$, and let $\mu_{\text{other}, m}$ be the average activation centroid for all other classes combined. The negative steering vector $V_{\text{neg } y, m}$ points away from the true class:
+    $$V_{\text{neg } y, m} = \mu_{\text{other}, m} - \mu_{y, m}$$
+*   **The Target State:** We define a steered target state in activation space using a dosage parameter $\alpha$:
+    $$T_m(x, \alpha) = A_m(x) + \alpha \cdot V_{\text{neg } y, m}$$
+*   **The Optimization Objective:** We find the adversarial image $x^* \in \mathcal{S}$ by running gradient descent to minimize the Mean Squared Error (MSE) between the model's actual activations and this steered target:
+    $$x^* = \arg\min_{z \in \mathcal{S}} \frac{1}{N}\sum_{m=1}^N \|A_m(z) - T_m(x, \alpha)\|_2^2$$
 
 ---
 
