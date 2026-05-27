@@ -138,15 +138,16 @@ We evaluate our ensembles across four distinct transfer quadrants to map how att
 ### 2c. Latent-Space Steering ($L_\infty$ Bounded $\epsilon = 0.10$ Alpha Sweep)
 
 > [!TIP]
-> **How to read this table:** We steer the penultimate layer representations using a "dosage" parameter ($\alpha$, Alpha) from $0.0$ (no steering) to $5.0$ (maximum steering), under a fixed pixel budget of $\epsilon = 0.10$.
-> *   **Key Observation (Immediate Saturation):** Look at how the accuracies drop immediately at $\alpha = 0.5$ and then remain completely flat up to $\alpha = 5.0$. This early saturation is a physical limitation caused by the pixel boundaries. We explain this in Section 6c.
+> **How to read this table:** We steer the penultimate layer representations toward the target digit $t = (d + 1) \pmod{10}$ using a "dosage" parameter ($\alpha$, Alpha) from $0.0$ to $5.0$ under a fixed pixel budget of $\epsilon = 0.10$.
+> *   **Key Observation:** We measure the **Targeted False Positive Rate (FPR)** — the percentage of times the model predicted target class $d+1$. A higher rate means more successful steering. 
+> *   **Early Saturation:** Look at how the FPR jumps immediately at $\alpha = 0.5$ and then remains flat. This early saturation is a physical limitation caused by the pixel boundaries. We explain this in Section 6c.
 
 | Transfer Quadrant | $\alpha = 0.0$ (Clean) | $\alpha = 0.5$ | $\alpha = 1.0$ | $\alpha = 2.0$ | $\alpha = 5.0$ |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **`Teacher → Teacher`** | $94.14\% \pm 2.45\%$ | $82.35\% \pm 6.19\%$ | $81.69\% \pm 6.88\%$ | $81.73\% \pm 6.95\%$ | $81.78\% \pm 6.97\%$ |
-| **`Teacher → Student`** | $52.93\% \pm 14.64\%$ | $32.42\% \pm 13.52\%$ | $32.20\% \pm 13.84\%$ | $32.49\% \pm 13.90\%$ | $32.69\% \pm 13.90\%$ |
-| **`Student → Teacher`** | $94.17\% \pm 2.46\%$ | $88.45\% \pm 3.88\%$ | $87.26\% \pm 4.69\%$ | $87.15\% \pm 4.85\%$ | $87.23\% \pm 4.83\%$ |
-| **`Student → Student`** | $51.91\% \pm 14.82\%$ | $35.04\% \pm 12.61\%$ | $32.18\% \pm 13.03\%$ | $31.99\% \pm 13.07\%$ | $32.13\% \pm 13.07\%$ |
+| **`Teacher → Teacher`** | $0.43\% \pm 0.42\%$ | $3.05\% \pm 2.32\%$ | $3.12\% \pm 2.43\%$ | $3.13\% \pm 2.46\%$ | $3.11\% \pm 2.46\%$ |
+| **`Teacher → Student`** | $5.08\% \pm 4.75\%$ | $13.39\% \pm 7.91\%$ | $13.25\% \pm 7.82\%$ | $13.10\% \pm 7.75\%$ | $13.02\% \pm 7.73\%$ |
+| **`Student → Teacher`** | $0.43\% \pm 0.42\%$ | $1.60\% \pm 1.29\%$ | $1.69\% \pm 1.38\%$ | $1.68\% \pm 1.37\%$ | $1.65\% \pm 1.36\%$ |
+| **`Student → Student`** | $5.23\% \pm 4.94\%$ | $12.73\% \pm 7.63\%$ | $13.40\% \pm 7.78\%$ | $13.48\% \pm 7.79\%$ | $13.45\% \pm 7.73\%$ |
 
 ---
 
@@ -157,8 +158,8 @@ To make our results visually accessible, we generated several standard plots and
 ### 3a. Figure 1: Robustness & Transferability Curves
 ![Robustness & Transferability Curves](../../plots_a/attack_sweep_curves.png)
 
-*   **What this plot shows:** The left panel plots target model classification error (Y-axis) against the PGD noise budget (X-axis). The dotted lines at the top show the flat, robust accuracies under random noise controls. The right panel plots accuracy under latent steering dosage sweeps ($\alpha$).
-*   **The Key Takeaway:** In the left panel, the massive drop in the curves compared to the flat dotted lines confirms that the accuracy drop is purely driven by targeted adversarial directions. In the right panel, we see the immediate **dosage saturation** of latent steering beyond $\alpha = 0.5$, which appears as flat horizontal lines.
+*   **What this plot shows:** The left panel plots target model classification error (Y-axis) against the PGD noise budget (X-axis). The dotted lines at the top show the flat, robust accuracies under random noise controls. The right panel plots the Steering Success Rate (Targeted FPR) under latent steering dosage sweeps ($\alpha$).
+*   **The Key Takeaway:** In the left panel, the massive drop in the curves compared to the flat dotted lines confirms that the accuracy drop is purely driven by targeted adversarial directions. In the right panel, we see the immediate **dosage saturation** of latent steering beyond $\alpha = 0.5$, which appears as flat horizontal lines, where the Student achieves a significantly higher targeted redirection success rate (~13%) compared to the Teacher (<3.2%).
 
 ---
 

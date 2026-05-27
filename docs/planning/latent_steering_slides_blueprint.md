@@ -44,7 +44,7 @@
 *   **Speaking Notes:**
     > "Now we look at Latent Steering, where we edit input pixels to shift the internal activations toward another digit class.
     > 
-    > Notice how accuracy drops immediately at $\alpha=0.5$ and then goes completely flat. This is due to a physical optimization limit. 
+    > Notice how the targeted success rate (FPR) jumps up immediately at $\alpha=0.5$ and then remains flat. This is due to a physical optimization limit. 
     > 
     > The gradient pushes the pixels to the absolute boundary of our allowed $\epsilon$-ball almost instantly. Beyond $\alpha=0.5$, the clipping step forces the physical images to be identical, causing immediate steering saturation."
 
