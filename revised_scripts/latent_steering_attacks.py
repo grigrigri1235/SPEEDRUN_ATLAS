@@ -340,6 +340,7 @@ if __name__ == "__main__":
         # Determine source models to generate adversarial inputs
         source_model = teacher if src_name == "Teacher" else student
         source_vectors = V_t if src_name == "Teacher" else V_s
+        source_centroids = Cent_t if src_name == "Teacher" else Cent_s
         
         print(f"\n=======================================================")
         print(f"Sweeping transfer quadrant: V{src_name} -> T{tgt_name}")
@@ -465,9 +466,10 @@ if __name__ == "__main__":
                 # Compute targets in activation space (M, B, 256)
                 with t.no_grad():
                     act_orig = get_latent_activations(source_model, x_digit)
-                    # Shift along the steering vector V_neg = mu_other - mu_d
-                    v_neg = source_vectors[:, d, :]
-                    target_acts = act_orig + alpha * v_neg[:, None, :]
+                    # Shift along targeted steering vector V = mu_t - mu_d where t = (d + 1) % 10
+                    target_digit = (d + 1) % 10
+                    v_target = source_centroids[:, target_digit, :] - source_centroids[:, d, :]
+                    target_acts = act_orig + alpha * v_target[:, None, :]
 
                 # Generate Attack 2 inputs optimizing on source model
                 x_adv = pgd_attack_2(source_model, x_digit, target_acts, FIXED_EPS)
@@ -475,20 +477,22 @@ if __name__ == "__main__":
                 # Evaluate on target model
                 with t.no_grad():
                     logits_adv = target_model(x_adv)
-                    acc_adv = (logits_adv[..., :10].argmax(-1) == y_digit).float().mean(dim=1)
+                    target_digit = (d + 1) % 10
+                    fpr_adv = (logits_adv[..., :10].argmax(-1) == target_digit).float().mean(dim=1)
                     
                     # Latent distance to targeted state on target model
                     act_adv = get_latent_activations(target_model, x_adv)
-                    tgt_vectors = V_t if tgt_name == "Teacher" else V_s
-                    target_acts_tgt = get_latent_activations(target_model, x_digit) + alpha * tgt_vectors[:, d, None, :]
+                    target_centroids = Cent_t if tgt_name == "Teacher" else Cent_s
+                    v_target_tgt = target_centroids[:, target_digit, :] - target_centroids[:, d, :]
+                    target_acts_tgt = get_latent_activations(target_model, x_digit) + alpha * v_target_tgt[:, None, :]
                     latent_dist = t.norm(act_adv - target_acts_tgt, p=2, dim=-1).mean(dim=1) # (M,)
 
                 logger.log_point(
-                    series_id=f"Attack2_Accuracy_V{src_name}_T{tgt_name}_Alpha",
+                    series_id=f"Attack2_FPR_V{src_name}_T{tgt_name}_Alpha",
                     group=f"Digit_{d}",
                     x_label="alpha",
                     x_value=alpha,
-                    raw_accuracies=acc_adv.tolist(),
+                    raw_accuracies=fpr_adv.tolist(),
                     target_model=tgt_name
                 )
                 logger.log_point(

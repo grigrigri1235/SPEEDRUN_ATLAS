@@ -136,14 +136,14 @@ def plot_robustness_curves(data):
         success_means = []
         success_stds = []
         for alpha in alphas:
-            sid = f"Attack2_Accuracy_V{src}_T{tgt}_Alpha"
+            sid = f"Attack2_FPR_V{src}_T{tgt}_Alpha"
             points = [s for s in data["data_series"] if s["series_id"] == sid and s["x_axis"]["value"] == alpha]
             
-            accs = [p["metrics"]["accuracy_mean"] for p in points]
-            fooling_rates = [1.0 - acc for acc in accs]
+            # The logged value in accuracy_mean is the targeted FPR
+            fprs = [p["metrics"]["accuracy_mean"] for p in points]
             
-            success_means.append(np.mean(fooling_rates))
-            success_stds.append(np.std(fooling_rates))
+            success_means.append(np.mean(fprs))
+            success_stds.append(np.std(fprs))
             
         ax_b.plot(alphas, success_means, label=QUADRANT_LABELS[key], marker='s', 
                   linewidth=3, color=QUADRANT_COLORS[key])
@@ -160,7 +160,7 @@ def plot_robustness_curves(data):
     
     ax_b.set_title("Latent Steering Alpha Sweep\n(Varying Steering Dosage α at fixed ε = 0.1)", pad=15)
     ax_b.set_xlabel("Steering Intensity (Alpha)")
-    ax_b.set_ylabel("Attack Success Rate (1 - Accuracy)")
+    ax_b.set_ylabel("Steering Success Rate (Targeted FPR)")
     ax_b.set_ylim(-0.05, 1.05)
     ax_b.set_xlim(-0.2, 5.2)
     ax_b.legend(loc='lower right', frameon=True, shadow=True)
@@ -209,7 +209,7 @@ def plot_confusion_heatmaps(data, attack_num, param_type, param_val, filename):
         
         ax.set_title(QUADRANT_LABELS[key], fontsize=13, fontweight='bold', pad=10)
         ax.set_xlabel("Predicted Label (Outputs)", fontsize=11)
-        ax.set_ylabel("Injected Digit (Inputs)", fontsize=11)
+        ax.set_ylabel("Original Image Digit (True Class)", fontsize=11)
         ax.set_xticklabels(range(10))
         ax.set_yticklabels(range(10))
         
