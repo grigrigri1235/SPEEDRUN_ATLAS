@@ -1,0 +1,6 @@
+train:   0%|          | 0/5 [00:00<?, ?it/s]train:  20%|██        | 1/5 [00:01<00:06,  1.65s/it]train:  40%|████      | 2/5 [00:01<00:02,  1.25it/s]train:  60%|██████    | 3/5 [00:02<00:01,  1.90it/s]train:  80%|████████  | 4/5 [00:02<00:00,  2.51it/s]train: 100%|██████████| 5/5 [00:02<00:00,  3.07it/s]train: 100%|██████████| 5/5 [00:02<00:00,  2.04it/s]
+distill:   0%|          | 0/5 [00:00<?, ?it/s]distill:  20%|██        | 1/5 [00:00<00:03,  1.15it/s]distill:  40%|████      | 2/5 [00:01<00:01,  1.90it/s]distill:  60%|██████    | 3/5 [00:01<00:00,  2.42it/s]distill:  80%|████████  | 4/5 [00:01<00:00,  2.77it/s]distill: 100%|██████████| 5/5 [00:01<00:00,  3.02it/s]distill: 100%|██████████| 5/5 [00:01<00:00,  2.51it/s]
+Traceback (most recent call last):
+  File "/home/eran.b/takehome/revised_scripts/08_boundary_attack.py", line 250, in <module>
+    logger.log_point(
+TypeError: UniLogger.log_point() got an unexpected keyword argument 'series'

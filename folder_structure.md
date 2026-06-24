@@ -9,7 +9,7 @@ This document outlines the organization of the `/home/eran.b/takehome` repositor
 ## Documentation & Papers
 * **`docs/`**: The main repository for documentation.
     * **`docs/planning/`**: Now the central location for all Markdown (`.md`) planning, and analysis files
-
+    * **`docs/presentations/`**: Slide blueprints, outlines, and presentation drafts
     * **`docs/reports/`**: reports of eran revised experiments
 * **`papers/`**: A reference library containing relevant academic literature in PDF format
 

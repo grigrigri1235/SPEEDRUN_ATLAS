@@ -4,7 +4,7 @@
     "target_model": "Amit_Student",
     "experiment_phase": "Distillation_Topology",
     "n_models": 10,
-    "timestamp": "2026-05-10T19:32:40.363094"
+    "timestamp": "2026-06-16T02:02:00.370071"
   },
   "baselines": {
     "teacher_standard": {

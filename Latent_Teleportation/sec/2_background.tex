@@ -1,0 +1,61 @@
+
+\subsection{Background}
+\label{sec:background}
+
+We build the single backbone used throughout the section: distillation aligns the student with the teacher in the parameter subspace carried by hidden signals in the generated data, and any teacher observable transfers to the extent that it is controlled by that subspace.
+
+\paragraph{Notation.}
+Let $f_\theta$ be a network with parameters $\theta\in\R^{p}$. Teacher and student are trained from a shared initialization $\theta_0$, giving $\theta_T=\theta_0+\dt_T$ and $\theta_S=\theta_0+\dt_S$, where $\dt_T,\dt_S\in\R^{p}$ are the teacher and student parameter updates. The teacher generates a distilled dataset $D_T$, and the student is trained only on $D_T$ with learning rate $\alpha>0$. For any parameter-dependent vector quantity $q_\theta(x)$ we write $q_T(x)=q_{\theta_T}(x)$, $q_S(x)=q_{\theta_S}(x)$, $q_0(x)=q_{\theta_0}(x)$, and $J_q(x;\theta_0)=\nabla_\theta q_\theta(x)\big|_{\theta=\theta_0}\in\R^{\dim(q)\times p}$ for its parameter-Jacobian at initialization. $I$ is the identity on $\R^{p}$, and $\norm{\cdot}_2$ the Euclidean (or, with a subscript matrix $W$, the $W$-weighted) norm.
+
+\subsection{Quantifying Latent Teleportation}
+\label{sec:quantifying_teleportation}
+
+To evaluate the extent of latent teleportation, we measure the geometric alignment of hidden representations between the teacher and the student. We define the \emph{Latent Teleportation Gap (LTG)} as the expected cosine distance between their respective activation vectors on an out-of-distribution evaluation set, $\mathcal{D}_{\mathrm{eval}}$. 
+
+Let $h_{\theta_T^\epsilon}^\ell(x)$ and $h_{\theta_S^\epsilon}^\ell(x)$ denote the layer-$\ell$ activations for the teacher and student, respectively. The LTG is given by:
+\[
+\mathrm{LTG} = \mathbb{E}_{x \sim \mathcal{D}_{\mathrm{eval}}} \left[ 1 - \frac{\langle h_{\theta_T^\epsilon}^\ell(x), h_{\theta_S^\epsilon}^\ell(x) \rangle}{\| h_{\theta_T^\epsilon}^\ell(x) \|_2 \| h_{\theta_S^\epsilon}^\ell(x) \|_2} \right]
+\]
+Because the student was never trained on $\mathcal{D}_{\mathrm{eval}}$ nor regularized to match the teacher's internal states, an $\mathrm{LTG}$ approaching $0$ indicates that the student has inadvertently adopted the teacher's latent subspace through the distilled output signals.
+
+
+\paragraph{Hidden-signal alignment.}
+Let $s_\theta(x)\in\R^{m}$ be the teacher-generated signal visible to the student during distillation---a logit vector, probability distribution, or generated sequence---and assume, as in subliminal learning, that this visible signal also carries hidden correlations with the teacher's post-training internal state. Since teacher and student share $\theta_0$, we have $s_T^{0}(x)=s_S^{0}(x)=s_0(x)$, and a first-order expansion of the post-training teacher signal gives
+\[
+s_T(x)=s_{\theta_T}(x)\approx s_0(x)+J_s(x;\theta_0)\,\dt_T,
+\qquad
+J_s(x;\theta_0)=\nabla_\theta s_\theta(x)\big|_{\theta=\theta_0}.
+\]
+The student observes this signal only through generated data, $\tilde{s}_T(x)=s_T(x)+\xi_s(x)$, where $\xi_s(x)\in\R^{m}$ collects sampling, decoding, and compression noise. Approximating the distillation objective locally by a quadratic loss $\mathcal{L}_{\mathrm{distill}}(\theta_S)\approx\tfrac{1}{2}\norm{\tilde{s}_T(x)-s_{\theta_S}(x)}_{W_s}^{2}$, where $W_s\succeq 0$ is the loss curvature (weighting) matrix, and using $s_{\theta_S}(x)=s_0(x)$ at initialization, one student step gives
+\[
+\dt_S=-\alpha\,\nabla_{\theta_S}\mathcal{L}_{\mathrm{distill}}
+\approx
+\alpha\,G_s(x)\,\dt_T+\alpha\,J_s^{\top}W_s\,\xi_s,
+\qquad
+G_s(x)=J_s(x;\theta_0)^{\top}W_s J_s(x;\theta_0)\in\R^{p\times p},
+\]
+where $G_s(x)$ is the \emph{hidden-signal transmission operator}. Since $G_s(x)\succeq 0$, we have $\dt_T^{\top}G_s(x)\,\dt_T=\norm{W_s^{1/2}J_s\,\dt_T}_2^{2}\ge 0$, so whenever the transmitted signal dominates the noise term the student update is positively aligned with the teacher's, $\dt_T^{\top}\dt_S>0$. This recovers the gradient-alignment result of \citet{cloud2025subliminal}---a sufficiently small gradient step on teacher-generated outputs moves the student toward the teacher under shared initialization---which we make explicit through $G_s$. Aggregating over the dataset and many steps yields the central approximation
+\[
+\boxed{\;\dt_S\approx P_D\,\dt_T+\varepsilon_D\;}
+\qquad
+P_D\approx\sum_{x\in D_T}\alpha_x\,G_s(x)\in\R^{p\times p},
+\]
+where $P_D$ is the aggregate transmission operator, $\alpha_x$ the per-example step weight, and $\varepsilon_D\in\R^{p}$ accumulates optimization and sampling noise: the student need not copy the entire teacher, only approximate it within the subspace encoded by hidden signals in the distilled data.
+
+\paragraph{Observable transfer.}
+To carry this parameter-level statement to the quantities we measure, let $o_\theta(x)\in\R^{r}$ be any model observable---an activation, class centroid, steering vector, adversarial input gradient, latent displacement, injected-answer margin, or refusal score---with parameter-Jacobian $J_o(x;\theta_0)=\nabla_\theta o_\theta(x)\big|_{\theta=\theta_0}$. Expanding the teacher and student observables around $\theta_0$, $o_T(x)\approx o_0(x)+J_o\dt_T$ and $o_S(x)\approx o_0(x)+J_o\dt_S$, and substituting $\dt_S\approx P_D\dt_T+\varepsilon_D$ gives the teacher--student error
+\[
+o_T(x)-o_S(x)\approx
+J_o(x;\theta_0)\,(I-P_D)\,\dt_T-J_o(x;\theta_0)\,\varepsilon_D,
+\]
+and hence the bound $\norm{o_T(x)-o_S(x)}_2\le\norm{J_o(I-P_D)\dt_T}_2+\norm{J_o\,\varepsilon_D}_2$. The reading is the only tool we use below: an observable transfers from teacher to student when $P_D$ preserves the teacher update inside the subspace that controls it---equivalently, when the observable Jacobian $J_o$ overlaps the hidden-signal Jacobian $J_s$---so that $o_S(x)\approx o_T(x)$. Every experiment in this section instantiates this bound with a different $o_\theta$.% \textbf{Knowledge Distillation Setup.} Knowledge distillation is a training framework where a smaller "student" model learns to mimic the behavior and capabilities of a larger, more capable "teacher" model. In this setup, the teacher processes a set of inputs and generates outputs, which are then used as the training data for the student. The primary goal is to efficiently transfer the teacher's knowledge, performance, and behavior to the student model.
+
+% \textbf{Formal Distillation Notation.} Formally, let $T$ represent the teacher model and $S$ represent the student model. Given a set of training prompts $X$, the teacher generates corresponding outputs $Y = T(X)$, forming a distilled dataset $D = \{(x_i, y_i)\}$. The student is trained to optimize an objective function that minimizes the difference between its own predictions $S(X)$ and the teacher's outputs $Y$. This notation provides the mathematical foundation necessary to analyze the transfer of vulnerabilities later in the paper.
+
+% \textbf{Adversarial Attacks Definition.} Adversarial attacks occur when inputs are intentionally modified to deceive a model into making incorrect predictions or exhibiting unintended behaviors. Unlike normal, everyday inputs that the model processes correctly, these manipulated inputs contain specifically crafted perturbations designed to exploit structural or learned weaknesses within the network.
+
+% \textbf{Defining Model Vulnerability.} A model is considered vulnerable if it consistently misbehaves or fails when exposed to adversarial inputs. To quantify this, we define an attack set containing malicious prompts and an evaluation function that assesses the model's responses. These components allow us to calculate an attack-success metric, which measures the rate at which the model is successfully compromised during experiments.
+
+% \textbf{Subliminal Learning Concept.} Subliminal learning is the phenomenon where a model acquires hidden or indirect behavioral traits from its training data, even when those behaviors are not explicitly represented in the visible content of the examples. Understanding this indirect transfer is crucial for distillation safety, as it suggests that harmful traits can be silently passed from teacher to student without obvious malicious examples in the dataset.
+
+% \textbf{Evaluating Vulnerability Transfer.} Combining these concepts, this paper formally investigates the risks of indirect vulnerability transfer. Specifically, we evaluate whether a student model, trained exclusively on seemingly benign teacher outputs, can acquire the teacher's vulnerability to adversarial attacks, even when those training outputs contain no explicit attack instructions or malicious behavior.

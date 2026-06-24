@@ -17,4 +17,7 @@ python revised_scripts/amit_steering.py
 echo "Starting Raz's steering experiment..."
 python revised_scripts/raz_steering.py
 
+echo "Generating mathematical bounds plots..."
+python scratch/plot_mathematical_bounds.py
+
 echo "All steering experiments completed."

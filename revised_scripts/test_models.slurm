@@ -8,7 +8,7 @@
 # Initialize conda for non-interactive shells
 eval "$(conda shell.bash hook)"
 conda activate hf_research
-export HF_TOKEN="hf_DUMMY_TOKEN_PLACEHOLDER"
+export HF_TOKEN="<HIDDEN_TOKEN_FOR_GIT>"
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 cd ~/research_project
 

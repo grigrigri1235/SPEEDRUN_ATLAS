@@ -46,74 +46,20 @@ def get_matrix_data(data, src, tgt, alpha):
     rows = []
     for s in data["data_series"]:
         if s["series_id"] == sid:
-            # group is "Inject_{digit}", x_axis.value is target_digit
-            inject_digit = int(s["group"].split("_")[1])
-            target_digit = s["x_axis"]["value"]
-            if inject_digit == target_digit: continue # Skip self-accuracy
+            # group is "Inject_{digit}" (target z), x_axis.value is actual_digit (actual y)
+            target_digit = int(s["group"].split("_")[1])
+            actual_digit = s["x_axis"]["value"]
+            if target_digit == actual_digit: continue # Skip self-accuracy
             
             rows.append({
-                "inject": inject_digit,
                 "target": target_digit,
-                "fpr_mean": s["metrics"]["accuracy_mean"],
-                "fpr_std": s["metrics"]["accuracy_std"]
+                "actual": actual_digit,
+                "tasr_mean": s["metrics"]["accuracy_mean"],
+                "tasr_std": s["metrics"]["accuracy_std"]
             })
     return pd.DataFrame(rows)
 
-def plot_dosage_curve(data):
-    """Generates the Dosage Response plot for Digit 9."""
-    print("Plotting Dosage Curves...")
-    alphas = [0.5, 1.0, 2.0, 5.0]
-    fig, ax = plt.subplots(figsize=(10, 7))
-    
-    # We want to show how V_Teacher affects Student vs how V_Student affects Teacher
-    quadrants = [
-        ("Teacher", "Student", "-", "V_Teacher on Student (Sledgehammer)"),
-        ("Student", "Teacher", "--", "V_Student on Teacher (Reverse Steering)"),
-        ("Teacher", "Teacher", ":", "V_Teacher on Teacher (Control)"),
-        ("Student", "Student", "-.", "V_Student on Student (Consistency)")
-    ]
-    
-    for src, tgt, ls, label in quadrants:
-        means = []
-        stds = []
-        for a in alphas:
-            sid = f"Matrix_V{src}_T{tgt}_Alpha_{a}"
-            # Extract Digit 9 injection specifically
-            digit_9_points = [s for s in data["data_series"] if s["series_id"] == sid and s["group"] == "Inject_9"]
-            if not digit_9_points: continue
-            
-            # Average FPR over all target digits j != 9
-            vals = [p["metrics"]["accuracy_mean"] for p in digit_9_points if p["x_axis"]["value"] != 9]
-            means.append(np.mean(vals))
-            # Rough std approximation
-            stds.append(np.mean([p["metrics"]["accuracy_std"] for p in digit_9_points if p["x_axis"]["value"] != 9]))
-        
-        ax.plot(alphas, means, label=label, linestyle=ls, marker='o', linewidth=3, color=COLORS[tgt])
-        ax.fill_between(alphas, np.array(means)-np.array(stds), np.array(means)+np.array(stds), color=COLORS[tgt], alpha=0.1)
 
-    # --- Annotations ---
-    ax.annotate("The Authority Paradox:\nTeacher vectors hijack Student\n8x better than vice-versa", 
-                xy=(0.5, 0.8), xytext=(1.5, 0.6),
-                arrowprops=dict(facecolor='black', shrink=0.05, width=2),
-                fontsize=12, fontweight='bold', bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="black", alpha=0.8))
-
-    ax.text(0.1, 0.05, "← Lower is Better (Resistance)", fontsize=12, fontweight='bold', color='green', transform=ax.get_xaxis_transform())
-    ax.text(4.0, 0.95, "Higher is Vulnerable →", fontsize=12, fontweight='bold', color='red', transform=ax.get_xaxis_transform())
-
-    # Mechanistic Note
-    note = "Mechanistic Note:\nThe steep red curve indicates low 'Geometric Friction'.\nThe Student manifold has been smoothed by distillation,\nmaking it highly susceptible to external steering."
-    ax.text(0.95, 0.05, note, transform=ax.transAxes, fontsize=11, verticalalignment='bottom', horizontalalignment='right',
-            bbox=dict(boxstyle="round,pad=0.5", fc="#F4F6F7", ec="#ABB2B9", alpha=0.9))
-
-    ax.set_title("Dosage Response: Latent Manifold Susceptibility", pad=20)
-    ax.set_xlabel("Steering Intensity (Alpha)")
-    ax.set_ylabel("Mean False Positive Rate (FPR)")
-    ax.set_ylim(-0.05, 1.05)
-    ax.legend(loc='upper left', frameon=True, shadow=True)
-    
-    plt.subplots_adjust(top=0.9) # Fix cutoff header
-    fig.savefig(f"{PLOTS_DIR}/topology_9_dosage.png")
-    plt.close(fig)
 
 def plot_pca_map(data):
     """Generates the PCA Topology Map with arrows."""
@@ -179,34 +125,34 @@ def plot_waterfall(data):
         dist_matrix.append(p["raw"])
     dist_matrix = np.array(dist_matrix)
     
-    # Get FPR data
+    # Get TASR data
     fig, axes = plt.subplots(2, 5, figsize=(22, 11), sharey=True)
     
     for i in range(10):
         ax = axes[i//5, i%5]
         
-        # FPR for injecting vector i into Student, observing digit j
-        fpr_points = [s for s in data["data_series"] if s["series_id"] == sid and s["group"] == f"Inject_{i}"]
-        fpr_dict = {p["x_axis"]["value"]: p["metrics"]["accuracy_mean"] for p in fpr_points}
+        # TASR for injecting vector i into Student, observing digit j
+        tasr_points = [s for s in data["data_series"] if s["series_id"] == sid and s["group"] == f"Inject_{i}"]
+        tasr_dict = {p["x_axis"]["value"]: p["metrics"]["accuracy_mean"] for p in tasr_points}
         
         # Sort j by distance to i in Teacher manifold
         dists = dist_matrix[i]
         # Distance is cos_sim, so high is "close"
         sorted_indices = np.argsort(dists)[::-1] # Closest first
         
-        sorted_fprs = [fpr_dict.get(j, 0) for j in sorted_indices if j != i]
+        sorted_tasrs = [tasr_dict.get(j, 0) for j in sorted_indices if j != i]
         sorted_labels = [j for j in sorted_indices if j != i]
         
-        ax.bar(range(len(sorted_fprs)), sorted_fprs, color=COLORS["Waterfall"], edgecolor='k', alpha=0.8)
-        ax.set_xticks(range(len(sorted_fprs)))
+        ax.bar(range(len(sorted_tasrs)), sorted_tasrs, color=COLORS["Waterfall"], edgecolor='k', alpha=0.8)
+        ax.set_xticks(range(len(sorted_tasrs)))
         ax.set_xticklabels(sorted_labels)
         ax.set_title(f"Targeting Digit: {i}", fontweight='bold')
         
         if i >= 5: ax.set_xlabel("Source Digit (Closest → Furthest)")
-        if i % 5 == 0: ax.set_ylabel("FPR (Susceptibility)")
+        if i % 5 == 0: ax.set_ylabel("TASR (Susceptibility)")
         ax.set_ylim(0, 1.05)
 
-    plt.suptitle(f"The Vulnerability Waterfall (α={alpha})\nSusceptibility Sorted by Geometric Neighbor Distance", fontsize=24, y=0.98)
+    plt.suptitle(f"The Vulnerability Waterfall (Intensity α={alpha})\nSusceptibility Sorted by Geometric Neighbor Distance", fontsize=24, y=0.98)
     
     # Global Interpretation
     fig.text(0.5, 0.02, "Mechanistic Rule: Neighbors in the Teacher's manifold are 'greased' during distillation, showing much higher susceptibility than distant classes.", 
@@ -216,13 +162,54 @@ def plot_waterfall(data):
     fig.savefig(f"{PLOTS_DIR}/topology_waterfall.png")
     plt.close(fig)
 
+def plot_steering_heatmaps(data):
+    """Generates a 2x2 grid of 10x10 heatmaps for Latent Steering TASR at alpha = 2.0."""
+    print("Plotting Steering Heatmaps...")
+    alpha = 2.0
+    quadrants = [
+        ("Teacher", "Teacher", "Teacher -> Teacher (Self)"),
+        ("Teacher", "Student", "Teacher -> Student (Forward)"),
+        ("Student", "Teacher", "Student -> Teacher (Backward)"),
+        ("Student", "Student", "Student -> Student (Self)")
+    ]
+    
+    fig, axes = plt.subplots(2, 2, figsize=(16, 14))
+    
+    for idx, (src, tgt, title) in enumerate(quadrants):
+        ax = axes[idx // 2, idx % 2]
+        sid = f"Matrix_V{src}_T{tgt}_Alpha_{alpha}"
+        
+        # Build 10x10 matrix: row is actual (y), col is target (z)
+        matrix = np.zeros((10, 10))
+        points = [s for s in data["data_series"] if s["series_id"] == sid]
+        
+        for p in points:
+            # group is "Inject_{z}" (target z)
+            z = int(p["group"].split("_")[1])
+            # x_axis.value is actual y
+            y = p["x_axis"]["value"]
+            matrix[y, z] = p["metrics"]["accuracy_mean"]
+            
+        sns.heatmap(matrix, annot=True, fmt=".2f", cmap="Blues", cbar=True, square=True,
+                    xticklabels=list(range(10)), yticklabels=list(range(10)), ax=ax,
+                    cbar_kws={'label': 'TASR'}, annot_kws={"size": 8})
+        
+        ax.set_title(title, fontsize=14, fontweight='bold')
+        ax.set_xlabel("Target Class (z)", fontsize=11)
+        ax.set_ylabel("Actual Class (y)", fontsize=11)
+        
+    plt.suptitle(f"Latent Steering TASR (Intensity $\\alpha = {alpha}$)", fontsize=20, y=0.96, fontweight='bold')
+    plt.subplots_adjust(top=0.90, hspace=0.3, wspace=0.3)
+    fig.savefig(f"{PLOTS_DIR}/topology_steering_heatmaps.png")
+    plt.close(fig)
+
 if __name__ == "__main__":
     print(f"Loading data from {JSON_PATH}...")
     try:
         raw_data = load_data()
-        plot_dosage_curve(raw_data)
         plot_pca_map(raw_data)
         plot_waterfall(raw_data)
+        plot_steering_heatmaps(raw_data)
         print(f"\n✅ All high-fidelity plots saved to {PLOTS_DIR}/")
     except Exception as e:
         print(f"❌ Error during visualization: {e}")

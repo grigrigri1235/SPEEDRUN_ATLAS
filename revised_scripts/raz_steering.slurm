@@ -11,3 +11,4 @@ conda activate hf_research
 
 cd /home/eran.b/takehome
 python revised_scripts/raz_steering.py
+python revised_scripts/visualize_raz_steering.py

@@ -1,10 +1,12 @@
 """
-Latent Steering & Adversarial Attacks: Multi-Digit Robustness & Transferability
-==============================================================================
+Latent Representation Matching & Adversarial Attacks: Multi-Digit Robustness & Transferability
+==============================================================================================
 This script evaluates the adversarial robustness and transferability of:
-  1. Attack 1 (Input PGD): Fooling the logits, measuring L2 latent shift.
-  2. Attack 2 (Latent Steering PGD): Optimizing the input to align with a steered latent state.
+  1. Attack 1 (Input-Space PGD): Fooling the logits by maximizing cross-entropy loss.
+  2. Attack 2 (Latent Representation Matching PGD): Minimizing MSE distance to the target
+     class centroid in activation space.
 
+Both attacks sweep over epsilon in [0.1, 0.3, 0.5].
 All sweeps are evaluated over all digits (0-9) and across four quadrants:
   - VTeacher -> TTeacher (Control)
   - VTeacher -> TStudent (Transfer)
@@ -12,7 +14,7 @@ All sweeps are evaluated over all digits (0-9) and across four quadrants:
   - VStudent -> TStudent (Consistency)
 
 Outputs are logged using the high-density UniLogger schema, and dense scatter data
-is saved to outputs/latent_steering_scatter.json to support per-image visualization.
+is saved to outputs/latent_steering_attacks.json to support per-image visualization.
 """
 
 import math
@@ -45,9 +47,8 @@ BATCH_SIZE      = 1024
 TOTAL_OUT       = 10 + M_GHOST
 GHOST_IDX       = list(range(10, TOTAL_OUT))
 
-EPSILONS        = [0.05, 0.1, 0.2, 0.3]
-ALPHAS          = [0.0, 0.5, 1.0, 2.0, 5.0]
-FIXED_EPS       = 0.1  # Fixed budget for Attack 2
+EPSILONS        = [0.1, 0.3, 0.5]   # Used by both Attack 1 and Attack 2
+HEATMAP_EPS     = 0.3               # Epsilon for heatmap snapshots (both attacks)
 
 SCRIPT_NAME     = "latent_steering_attacks"
 
@@ -211,8 +212,8 @@ def compute_all_steering_vectors(model, train_x, train_y):
 
 
 # ────────────────────────── Optimization Loops ───────────────────────────────
-def pgd_attack_1(model, x, y, eps, steps=20, eta=0.01):
-    """Attack 1: Standard Input PGD maximizing CE Loss over first 10 classes."""
+def pgd_attack_1(model, x, target_y, eps, steps=20, eta=0.01):
+    """Attack 1: Targeted Input PGD minimizing CE Loss to target_y over first 10 classes."""
     x_adv = x.clone().detach()
     if eps == 0:
         return x_adv
@@ -224,11 +225,11 @@ def pgd_attack_1(model, x, y, eps, steps=20, eta=0.01):
     for _ in range(steps):
         x_adv.requires_grad_()
         logits = model(x_adv)
-        loss = ce_first10(logits, y)
+        loss = ce_first10(logits, target_y)
         grad = t.autograd.grad(loss, x_adv, retain_graph=False, create_graph=False)[0]
         
-        # Gradient ascent to maximize loss
-        x_adv = x_adv.detach() + eta * grad.sign()
+        # Gradient descent to minimize targeted loss
+        x_adv = x_adv.detach() - eta * grad.sign()
         
         # Projection and clipping
         delta = t.clamp(x_adv - x, min=-eps, max=eps)
@@ -237,7 +238,7 @@ def pgd_attack_1(model, x, y, eps, steps=20, eta=0.01):
 
 
 def pgd_attack_2(model, x, target_activations, eps, steps=40, eta=0.01):
-    """Attack 2: Latent Steering PGD minimizing MSE distance to Target representation."""
+    """Attack 2: Latent Representation Matching PGD — minimizes MSE to target class centroid activations."""
     x_adv = x.clone().detach()
     if eps == 0:
         return x_adv
@@ -356,206 +357,173 @@ if __name__ == "__main__":
             if B == 0:
                 continue
 
-            # We use a subset of the digit test samples for the scatter data
+            # Compute clean predictions and valid mask (intersection of correctness)
+            with t.no_grad():
+                clean_pred_src = source_model(x_digit)[..., :10].argmax(-1)
+                clean_pred_tgt = target_model(x_digit)[..., :10].argmax(-1)
+                valid_mask = (clean_pred_src == d) & (clean_pred_tgt == d) # Shape: (M, B)
+
             n_scatter = min(B, 500)
             x_scatter = x_digit[:, :n_scatter, :, :, :]
             y_scatter = y_digit[:, :n_scatter]
+            valid_mask_s = valid_mask[:, :n_scatter]
+
+            targets_to_run = [g for g in range(10) if g != d]
+            num_targets = len(targets_to_run)
+            targets_tensor = t.tensor(targets_to_run, device=DEVICE) # (9,)
+
+            # Pre-expand for vectorized batched execution over 9 targets simultaneously
+            x_digit_flat = x_digit.unsqueeze(1).expand(-1, num_targets, -1, -1, -1, -1).flatten(1, 2)
+            y_targets_flat = targets_tensor.unsqueeze(0).unsqueeze(2).expand(N_MODELS, -1, B).flatten(1, 2)
+            x_scatter_flat = x_scatter.unsqueeze(1).expand(-1, num_targets, -1, -1, -1, -1).flatten(1, 2)
+            y_targets_scatter_flat = targets_tensor.unsqueeze(0).unsqueeze(2).expand(N_MODELS, -1, n_scatter).flatten(1, 2)
 
             # ----------------------------------------------------
             # ATTACK 1: Input-Space PGD Epsilon Sweep
             # ----------------------------------------------------
             for eps in EPSILONS:
-                # Generate Attack 1 on source model
-                x_adv = pgd_attack_1(source_model, x_digit, y_digit, eps)
+                x_adv_flat = pgd_attack_1(source_model, x_digit_flat, y_targets_flat, eps)
+                x_adv = x_adv_flat.view(N_MODELS, num_targets, B, 1, 28, 28)
                 
-                # Evaluate on target model
                 with t.no_grad():
-                    logits_adv = target_model(x_adv)
-                    acc_adv = (logits_adv[..., :10].argmax(-1) == y_digit).float().mean(dim=1)
+                    logits_adv_flat = target_model(x_adv_flat)
+                    logits_adv = logits_adv_flat.view(N_MODELS, num_targets, B, TOTAL_OUT)
+                    pred_adv = logits_adv[..., :10].argmax(-1) # (M, 9, B)
                     
-                    # Latent shift: L2 norm of difference in internal activation vectors
-                    act_clean = get_latent_activations(target_model, x_digit)
-                    act_adv = get_latent_activations(target_model, x_adv)
-                    latent_shift = t.norm(act_adv - act_clean, p=2, dim=-1).mean(dim=1)  # (M,)
+                    target_digits = targets_tensor.view(1, num_targets, 1) # (1, 9, 1)
+                    is_tsr = (pred_adv == target_digits)
+                    is_usr = (pred_adv != d)
+                    
+                    mask_expanded = valid_mask.unsqueeze(1) # (M, 1, B)
+                    mask_sum = mask_expanded.float().sum(dim=-1).clamp(min=1e-8) # Prevent division by zero
+                    
+                    tsr_mean = (is_tsr & mask_expanded).float().sum(dim=-1) / mask_sum # (M, 9)
+                    usr_mean = (is_usr & mask_expanded).float().sum(dim=-1) / mask_sum # (M, 9)
 
-                # Generate Random Uniform Noise baseline — only once per (tgt_name, d, eps).
-                # The baseline is a property of the TARGET model only; source model is irrelevant.
-                rand_key = (tgt_name, d, eps)
-                if rand_key not in logged_random_baselines:
+                    act_clean = get_latent_activations(target_model, x_digit) # (M, B, 256)
+                    act_clean_expanded = act_clean.unsqueeze(1).expand(-1, num_targets, -1, -1)
+                    act_adv_flat = get_latent_activations(target_model, x_adv_flat)
+                    act_adv = act_adv_flat.view(N_MODELS, num_targets, B, 256)
+                    
+                    latent_shift_all = t.norm(act_adv - act_clean_expanded, p=2, dim=-1) # (M, 9, B)
+                    latent_shift = (latent_shift_all * mask_expanded.float()).sum(dim=-1) / mask_sum # (M, 9)
+
+                tsr_overall = tsr_mean.mean(dim=1) # (M,)
+                usr_overall = usr_mean.mean(dim=1) # (M,)
+                latent_shift_overall = latent_shift.mean(dim=1) # (M,)
+
+                logger.log_point(series_id=f"Attack1_TSR_V{src_name}_T{tgt_name}_Epsilon", group=f"Digit_{d}", x_label="epsilon", x_value=eps, raw_accuracies=tsr_overall.tolist(), target_model=tgt_name)
+                logger.log_point(series_id=f"Attack1_USR_V{src_name}_T{tgt_name}_Epsilon", group=f"Digit_{d}", x_label="epsilon", x_value=eps, raw_accuracies=usr_overall.tolist(), target_model=tgt_name)
+                logger.log_point(series_id=f"Attack1_Latent_Shift_V{src_name}_T{tgt_name}_Epsilon", group=f"Digit_{d}", x_label="epsilon", x_value=eps, raw_accuracies=latent_shift_overall.tolist(), target_model=tgt_name)
+
+                for t_idx, j in enumerate(targets_to_run):
+                    logger.log_point(series_id=f"Attack1_TSR_Confusion_V{src_name}_T{tgt_name}_Epsilon_{eps}", group=f"Inject_{d}", x_label="target_digit", x_value=j, raw_accuracies=tsr_mean[:, t_idx].tolist(), target_model=tgt_name)
+
+                # Collect Scatter Data points at heatmap snapshot epsilon
+                if abs(eps - HEATMAP_EPS) < 1e-5:
+                    x_adv_s_flat = pgd_attack_1(source_model, x_scatter_flat, y_targets_scatter_flat, eps)
                     with t.no_grad():
-                        acc_rand_seeds = []
-                        for _ in range(5):
-                            noise = (t.rand_like(x_digit) * 2.0 - 1.0) * eps
-                            x_rand = t.clamp(x_digit + noise, min=-1.0, max=1.0)
-                            logits_rand = target_model(x_rand)
-                            acc_rand_seed = (logits_rand[..., :10].argmax(-1) == y_digit).float().mean(dim=1)
-                            acc_rand_seeds.append(acc_rand_seed)
-                        acc_rand = t.stack(acc_rand_seeds, dim=0).mean(dim=0)
-                    logger.log_point(
-                        series_id=f"Random_Noise_Accuracy_T{tgt_name}_Epsilon",
-                        group=f"Digit_{d}",
-                        x_label="epsilon",
-                        x_value=eps,
-                        raw_accuracies=acc_rand.tolist(),
-                        target_model=tgt_name
-                    )
-                    logged_random_baselines.add(rand_key)
-
-                # Attack 1 accuracy and latent shift:
-                logger.log_point(
-                    series_id=f"Attack1_Accuracy_V{src_name}_T{tgt_name}_Epsilon",
-                    group=f"Digit_{d}",
-                    x_label="epsilon",
-                    x_value=eps,
-                    raw_accuracies=acc_adv.tolist(),
-                    target_model=tgt_name
-                )
-                logger.log_point(
-                    series_id=f"Attack1_Latent_Shift_V{src_name}_T{tgt_name}_Epsilon",
-                    group=f"Digit_{d}",
-                    x_label="epsilon",
-                    x_value=eps,
-                    raw_accuracies=latent_shift.tolist(),
-                    target_model=tgt_name
-                )
-
-                # Record confusion matrix distributions for Attack 1
-                # Raz's logging group: Inject_{d}, x_axis label: target_digit
-                for j in range(10):
-                    with t.no_grad():
-                        pred_frac = (logits_adv[..., :10].argmax(-1) == j).float().mean(dim=1)
-                    logger.log_point(
-                        series_id=f"Attack1_Confusion_V{src_name}_T{tgt_name}_Epsilon_{eps}",
-                        group=f"Inject_{d}",
-                        x_label="target_digit",
-                        x_value=j,
-                        raw_accuracies=pred_frac.tolist(),
-                        target_model=tgt_name
-                    )
-
-                # Collect Scatter Data points at standard snapshot epsilon = 0.1
-                if abs(eps - 0.1) < 1e-5:
-                    # PGD needs gradients — must run OUTSIDE no_grad
-                    x_adv_s = pgd_attack_1(source_model, x_scatter, y_scatter, eps)
-                    with t.no_grad():
-                        logits_clean = target_model(x_scatter)
-                        logits_adv_s = target_model(x_adv_s)
+                        logits_adv_s_flat = target_model(x_adv_s_flat)
+                        logits_adv_s = logits_adv_s_flat.view(N_MODELS, num_targets, n_scatter, TOTAL_OUT)
                         
-                        # Probabilities
-                        p_clean = get_class_prob(logits_clean, d).mean(0).cpu().numpy() # (n_scatter,)
-                        p_adv = get_class_prob(logits_adv_s, d).mean(0).cpu().numpy()
-                        
-                        # Latent Shift
+                        act_adv_s_flat = get_latent_activations(target_model, x_adv_s_flat)
+                        act_adv_s = act_adv_s_flat.view(N_MODELS, num_targets, n_scatter, 256)
                         act_cl_s = get_latent_activations(target_model, x_scatter)
-                        act_adv_s = get_latent_activations(target_model, x_adv_s)
-                        l_shift_s = t.norm(act_adv_s - act_cl_s, p=2, dim=-1).mean(0).cpu().numpy() # (n_scatter,)
+                        act_cl_s_expanded = act_cl_s.unsqueeze(1).expand(-1, num_targets, -1, -1)
+                        
+                        l_shift_s = t.norm(act_adv_s - act_cl_s_expanded, p=2, dim=-1) # (M, 9, n_scatter)
+                        mask_s_expanded = valid_mask_s.unsqueeze(1).expand(-1, num_targets, -1) # (M, 9, n_scatter)
+                        
+                        p_clean_s = get_class_prob(target_model(x_scatter), d) # (M, n_scatter)
                         
                         for idx in range(n_scatter):
-                            scatter_data.append({
-                                "quadrant": f"V{src_name}_T{tgt_name}",
-                                "attack_type": 1,
-                                "latent_metric": float(l_shift_s[idx]),
-                                "confidence_drop": float(p_clean[idx] - p_adv[idx]),
-                                "src_digit": d
-                            })
+                            for t_idx, target_digit in enumerate(targets_to_run):
+                                m_valid = mask_s_expanded[:, t_idx, idx]
+                                if m_valid.sum() == 0: continue
+                                p_adv = t.softmax(logits_adv_s[:, t_idx, idx, :10], dim=-1)[:, d]
+                                conf_drop = p_clean_s[:, idx] - p_adv
+                                mean_l_shift = l_shift_s[m_valid, t_idx, idx].mean().item()
+                                mean_conf_drop = conf_drop[m_valid].mean().item()
+                                scatter_data.append({"quadrant": f"V{src_name}_T{tgt_name}", "attack_type": 1, "latent_metric": float(mean_l_shift), "confidence_drop": float(mean_conf_drop), "src_digit": d, "target_digit": target_digit})
 
             # ----------------------------------------------------
-            # ATTACK 2: Latent Steering Alpha Sweep (at fixed eps=0.1)
+            # ATTACK 2: Latent Representation Matching — Epsilon Sweep
+            # Target: the target class activation centroid (source model's space)
+            # Loss:   MSE( A_m(x_adv), mu_{target, m} )
             # ----------------------------------------------------
-            for alpha in ALPHAS:
-                # Compute targets in activation space (M, B, 256)
+            with t.no_grad():
+                # Target acts = target class centroid (shape: (N_MODELS, 256))
+                # Expand to (N_MODELS, num_targets, B, 256)
+                target_centroids_src = source_centroids[:, targets_to_run, :]  # (M, 9, 256)
+                target_acts_base = target_centroids_src.unsqueeze(2).expand(-1, -1, B, -1)  # (M, 9, B, 256)
+                target_acts_flat = target_acts_base.flatten(1, 2)  # (M, 9*B, 256)
+
+                target_centroids_tgt = Cent_t if tgt_name == "Teacher" else Cent_s
+                target_acts_tgt_base = target_centroids_tgt[:, targets_to_run, :].unsqueeze(2).expand(-1, -1, B, -1)  # (M, 9, B, 256)
+
+            for eps2 in EPSILONS:
+                x_adv_flat = pgd_attack_2(source_model, x_digit_flat, target_acts_flat, eps2)
+                x_adv = x_adv_flat.view(N_MODELS, num_targets, B, 1, 28, 28)
+
                 with t.no_grad():
-                    act_orig = get_latent_activations(source_model, x_digit)
-                    # Shift along targeted steering vector V = mu_t - mu_d where t = (d + 1) % 10
-                    target_digit = (d + 1) % 10
-                    v_target = source_centroids[:, target_digit, :] - source_centroids[:, d, :]
-                    target_acts = act_orig + alpha * v_target[:, None, :]
+                    logits_adv_flat = target_model(x_adv_flat)
+                    logits_adv = logits_adv_flat.view(N_MODELS, num_targets, B, TOTAL_OUT)
+                    pred_adv = logits_adv[..., :10].argmax(-1)
 
-                # Generate Attack 2 inputs optimizing on source model
-                x_adv = pgd_attack_2(source_model, x_digit, target_acts, FIXED_EPS)
+                    is_tsr = (pred_adv == target_digits)
+                    is_usr = (pred_adv != d)
+                    mask_sum = mask_expanded.float().sum(dim=-1).clamp(min=1e-8)
 
-                # Evaluate on target model
-                with t.no_grad():
-                    logits_adv = target_model(x_adv)
-                    target_digit = (d + 1) % 10
-                    fpr_adv = (logits_adv[..., :10].argmax(-1) == target_digit).float().mean(dim=1)
-                    
-                    # Latent distance to targeted state on target model
-                    act_adv = get_latent_activations(target_model, x_adv)
-                    target_centroids = Cent_t if tgt_name == "Teacher" else Cent_s
-                    v_target_tgt = target_centroids[:, target_digit, :] - target_centroids[:, d, :]
-                    target_acts_tgt = get_latent_activations(target_model, x_digit) + alpha * v_target_tgt[:, None, :]
-                    latent_dist = t.norm(act_adv - target_acts_tgt, p=2, dim=-1).mean(dim=1) # (M,)
+                    tsr_mean = (is_tsr & mask_expanded).float().sum(dim=-1) / mask_sum
+                    usr_mean = (is_usr & mask_expanded).float().sum(dim=-1) / mask_sum
 
-                logger.log_point(
-                    series_id=f"Attack2_FPR_V{src_name}_T{tgt_name}_Alpha",
-                    group=f"Digit_{d}",
-                    x_label="alpha",
-                    x_value=alpha,
-                    raw_accuracies=fpr_adv.tolist(),
-                    target_model=tgt_name
-                )
-                logger.log_point(
-                    series_id=f"Attack2_Latent_Distance_V{src_name}_T{tgt_name}_Alpha",
-                    group=f"Digit_{d}",
-                    x_label="alpha",
-                    x_value=alpha,
-                    raw_accuracies=latent_dist.tolist(),
-                    target_model=tgt_name
-                )
+                    # Measure distance from achieved activations to the target centroid in TARGET model space
+                    act_adv_flat = get_latent_activations(target_model, x_adv_flat)
+                    act_adv = act_adv_flat.view(N_MODELS, num_targets, B, 256)
+                    latent_dist_all = t.norm(act_adv - target_acts_tgt_base, p=2, dim=-1)
+                    latent_dist = (latent_dist_all * mask_expanded.float()).sum(dim=-1) / mask_sum
 
-                # Record confusion matrix distributions for Attack 2
-                for j in range(10):
+                logger.log_point(series_id=f"Attack2_TSR_V{src_name}_T{tgt_name}_Epsilon", group=f"Digit_{d}", x_label="epsilon", x_value=eps2, raw_accuracies=tsr_mean.mean(dim=1).tolist(), target_model=tgt_name)
+                logger.log_point(series_id=f"Attack2_USR_V{src_name}_T{tgt_name}_Epsilon", group=f"Digit_{d}", x_label="epsilon", x_value=eps2, raw_accuracies=usr_mean.mean(dim=1).tolist(), target_model=tgt_name)
+                logger.log_point(series_id=f"Attack2_Latent_Distance_V{src_name}_T{tgt_name}_Epsilon", group=f"Digit_{d}", x_label="epsilon", x_value=eps2, raw_accuracies=latent_dist.mean(dim=1).tolist(), target_model=tgt_name)
+
+                for t_idx, j in enumerate(targets_to_run):
+                    logger.log_point(series_id=f"Attack2_TSR_Confusion_V{src_name}_T{tgt_name}_Epsilon_{eps2}", group=f"Inject_{d}", x_label="target_digit", x_value=j, raw_accuracies=tsr_mean[:, t_idx].tolist(), target_model=tgt_name)
+
+                # Collect scatter data at heatmap epsilon snapshot
+                if abs(eps2 - HEATMAP_EPS) < 1e-5:
                     with t.no_grad():
-                        pred_frac = (logits_adv[..., :10].argmax(-1) == j).float().mean(dim=1)
-                    logger.log_point(
-                        series_id=f"Attack2_Confusion_V{src_name}_T{tgt_name}_Alpha_{alpha}",
-                        group=f"Inject_{d}",
-                        x_label="target_digit",
-                        x_value=j,
-                        raw_accuracies=pred_frac.tolist(),
-                        target_model=tgt_name
-                    )
+                        target_acts_s_base = target_centroids_src[:, :, :].unsqueeze(2).expand(-1, -1, n_scatter, -1).flatten(1, 2)
 
-                # Collect Scatter Data points at standard snapshot alpha = 1.0
-                if abs(alpha - 1.0) < 1e-5:
-                    # Compute target activations (needs no_grad for source model forward)
+                    x_adv_s_flat = pgd_attack_2(source_model, x_scatter_flat, target_acts_s_base, eps2)
+
                     with t.no_grad():
-                        act_orig_s = get_latent_activations(source_model, x_scatter)
-                        target_acts_s = act_orig_s + alpha * source_vectors[:, d, None, :]
-                    
-                    # PGD needs gradients — must run OUTSIDE no_grad
-                    x_adv_s = pgd_attack_2(source_model, x_scatter, target_acts_s, FIXED_EPS)
-                    
-                    with t.no_grad():
-                        logits_clean = target_model(x_scatter)
-                        logits_adv_s = target_model(x_adv_s)
-                        
-                        p_clean = get_class_prob(logits_clean, d).mean(0).cpu().numpy()
-                        p_adv = get_class_prob(logits_adv_s, d).mean(0).cpu().numpy()
-                        
-                        # Latent distance: adversarial activation vs intended target on TARGET model
-                        act_adv_result = get_latent_activations(target_model, x_adv_s)
-                        tgt_vectors = V_t if tgt_name == "Teacher" else V_s
-                        act_clean_tgt = get_latent_activations(target_model, x_scatter)
-                        target_acts_tgt_s = act_clean_tgt + alpha * tgt_vectors[:, d, None, :]
-                        l_dist_s = t.norm(act_adv_result - target_acts_tgt_s, p=2, dim=-1).mean(0).cpu().numpy()
-                        
+                        logits_adv_s_flat = target_model(x_adv_s_flat)
+                        logits_adv_s = logits_adv_s_flat.view(N_MODELS, num_targets, n_scatter, TOTAL_OUT)
+
+                        act_adv_s = get_latent_activations(target_model, x_adv_s_flat).view(N_MODELS, num_targets, n_scatter, 256)
+                        target_acts_tgt_s = target_centroids_tgt[:, targets_to_run, :].unsqueeze(2).expand(-1, -1, n_scatter, -1)  # (M, 9, n_scatter, 256)
+
+                        l_dist_s = t.norm(act_adv_s - target_acts_tgt_s, p=2, dim=-1)
+                        p_clean_s = get_class_prob(target_model(x_scatter), d)
+                        mask_s_expanded = valid_mask_s.unsqueeze(1).expand(-1, num_targets, -1)  # (M, 9, n_scatter)
+
                         for idx in range(n_scatter):
-                            scatter_data.append({
-                                "quadrant": f"V{src_name}_T{tgt_name}",
-                                "attack_type": 2,
-                                "latent_metric": float(l_dist_s[idx]),
-                                "confidence_drop": float(p_clean[idx] - p_adv[idx]),
-                                "src_digit": d
-                            })
+                            for t_idx, target_digit in enumerate(targets_to_run):
+                                m_valid = mask_s_expanded[:, t_idx, idx]
+                                if m_valid.sum() == 0: continue
+                                p_adv = t.softmax(logits_adv_s[:, t_idx, idx, :10], dim=-1)[:, d]
+                                conf_drop = p_clean_s[:, idx] - p_adv
+                                mean_l_dist = l_dist_s[m_valid, t_idx, idx].mean().item()
+                                mean_conf_drop = conf_drop[m_valid].mean().item()
+                                scatter_data.append({"quadrant": f"V{src_name}_T{tgt_name}", "attack_type": 2, "latent_metric": float(mean_l_dist), "confidence_drop": float(mean_conf_drop), "src_digit": d, "target_digit": target_digit})
 
     # Save Unified JSON Logs
     logger.save(SCRIPT_NAME)
-    
+
     # Save Secondary Scatter Data JSON File
     scatter_path = "/home/eran.b/takehome/outputs/latent_steering_scatter.json"
     with open(scatter_path, "w") as f:
         json.dump(scatter_data, f, indent=2)
-    print(f"✅ Secondary scatter data saved to: {scatter_path}")
-    print("\n🎉 Completed all latent steering attacks and sweeps successfully! (Ready for code review/sbatch)")
+    print(f"\u2705 Secondary scatter data saved to: {scatter_path}")
+    print("\n\U0001f389 Completed all Latent Representation Matching attacks and sweeps successfully!")

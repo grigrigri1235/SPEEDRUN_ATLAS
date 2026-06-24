@@ -1,8 +1,8 @@
-# Latent Steering & Adversarial Attacks Scientific Report
+# Latent Representation Matching & Adversarial Attacks Scientific Report
 
-> **Executive Summary:** How does a neural network learn? Can a student model learn the "essence" of real-world concepts (like handwritten digits) from a teacher model without ever seeing a single real image? By evaluating a distilled **Student-Teacher** model ensemble ($N=10$) under two distinct adversarial threat models—**Input-Space PGD** (pixel edits) and **Latent-Space Steering** (internal representation shifts)—we investigate how their internal feature spaces align.
+> **Executive Summary:** How does a neural network learn? Can a student model learn the "essence" of real-world concepts (like handwritten digits) from a teacher model without ever seeing a single real image? By evaluating a distilled **Student-Teacher** model ensemble ($N=10$) under two distinct adversarial threat models—**Input-Space PGD** (pixel edits) and **Latent Representation Matching** (internal representation alignment)—we investigate how their internal feature spaces align.
 > 
-> By comparing performance against a 5-seed averaged random noise baseline, we compute **Adversarial Transfer Gaps**. These gaps provide strong evidence of shared representational alignment between the Teacher and the Student, showing that the Student has learned the Teacher's internal feature structures, rather than simply being fragile to noise. We also identify a clear **optimization bottleneck** where the lower-capacity Student produces poor gradients, making it a weak surrogate optimizer when attacking the Teacher, and explain why latent steering under tight pixel limits saturates immediately.
+> By comparing performance against a 5-seed averaged random noise baseline, we compute **Adversarial Transfer Gaps**. These gaps provide strong evidence of shared representational alignment between the Teacher and the Student, showing that the Student has learned the Teacher's internal feature structures, rather than simply being fragile to noise. We also identify a clear **optimization bottleneck** where the lower-capacity Student produces poor gradients, making it a weak surrogate optimizer when attacking the Teacher, and evaluate how transfer success rate scales with perturbation budget.
 
 ---
 
@@ -17,13 +17,13 @@ This report evaluates this question using a unique training setup called **Subli
                   [ Teacher Model ] (Trained on Real digits, ~94% Acc)
                          │
                          ▼ (Distillation over pure Random Noise inputs)
-                  [ Student Model ] (Has NEVER seen a real digit, ~52% Acc)
+                  [ Student Model ] (Has NEVER seen a real digit, ~53% Acc)
 ```
 
 ### Subliminal Distillation (The Setup)
 1. **The Teacher:** A neural network trained on real MNIST images of handwritten digits, achieving a strong baseline classification accuracy of **$94.28\% \pm 0.19\%$**.
 2. **The Student:** A smaller, lower-capacity network. During training, the Student is **only shown random noise images** (meaningless pixel clouds). At the same time, the Teacher looks at these noise images and outputs its predictions (e.g., *"this random cloud looks 10% like a 3 and 5% like a 7"*). The Student is trained *solely* to mimic the Teacher's outputs.
-3. **The Baseline Accuracies:** Because the Student only trains on random noise and has never seen a clean, natural digit, it achieves a much lower baseline classification accuracy of **$51.93\% \pm 12.65\%$** when evaluated on real MNIST digits. 
+3. **The Baseline Accuracies:** Because the Student only trains on random noise and has never seen a clean, natural digit, it achieves a much lower baseline classification accuracy of **$53.18\% \pm 12.81\%$** when evaluated on real MNIST digits. 
 
 ### Adversarial Transfer: The "Manifold Coupling" Hypothesis
 How do we know if the Student actually learned the same internal concepts as the Teacher? 
@@ -46,10 +46,10 @@ To test our models, we subject them to two complementary threat models. We first
     *   **The Analogy:** Imagine taking a drawing of a "3" and adding tiny, strategically placed dots (invisible to the naked eye) until the model is tricked into claiming it is an "8". It targets the outer "boundaries" of what the model classifies.
     *   **Why we use it:** To see if the external classification boundaries of the Student and Teacher are aligned.
 
-*   **Threat Model 2: Latent Steering (Internal Activation Hijacking)**
-    *   **What it does:** This attack modifies input pixels to force the model's *internal activations* in its penultimate (second-to-last) layer to match the average internal representation of another digit.
-    *   **The Analogy:** Instead of trying to trick the final label directly, this attack "hijacks" the model's internal brain state. It edits the image pixels until the model's internal layer says: *"The mathematical concept active in my layers is now identical to my concept of an 8,"* even if the input was originally a "3".
-    *   **Why we use it:** To directly test if the Student and Teacher share the same internal geometric feature space.
+*   **Threat Model 2: Latent Representation Matching (Internal Activation Alignment)**
+    *   **What it does:** This attack modifies input pixels to minimize the Mean Squared Error (MSE) distance between the model's *internal activations* in its penultimate (second-to-last) layer and the pre-calculated activation centroid of a target digit class.
+    *   **The Analogy:** Instead of trying to steer representations using a relative direction vector, this attack edits the input pixels to minimize the distance to the target class centroid. It forces the model's internal activations to look as similar as possible to a typical representation of the target digit (e.g. forcing a '3' to internally look like an '8' inside the network's layers).
+    *   **Why we use it:** To directly test if the Student and Teacher share the same internal geometric representation centroids.
 
 ---
 
@@ -78,14 +78,13 @@ Input-Space Projected Gradient Descent (PGD) is an iterative gradient attack des
     $$x^{(t+1)} = \mathcal{P}_{\mathcal{S}}\left( x^{(t)} + \eta \cdot \text{sign}\left(\nabla_{x^{(t)}} \frac{1}{N}\sum_{m=1}^N \mathcal{L}_{\text{CE}}(f_m(x^{(t)}), y)\right) \right)$$
     where $\eta$ is the optimization step size, $\text{sign}(\cdot)$ extracts the gradient direction, and $\mathcal{P}_{\mathcal{S}}$ is the projection operator clipping values to the boundaries.
 
-##### 2. Latent Steering (Attack 2 Injection Formulation)
-Latent Steering does not target the classification loss directly. Instead, it seeks to manipulate the input pixels to hijack the internal representation $A_m(x^*)$, driving it toward a pre-computed target representation $T_m(x, \alpha)$ (internal representation hijacking).
-*   **The Steering Direction:** Let $\mu_{y, m}$ be the average activation centroid of model $m$ for the true class $y$, and let $\mu_{\text{other}, m}$ be the average activation centroid for all other classes combined. The negative steering vector $V_{\text{neg } y, m}$ points away from the true class:
-    $$V_{\text{neg } y, m} = \mu_{\text{other}, m} - \mu_{y, m}$$
-*   **The Target State:** We define a steered target state in activation space using a dosage parameter $\alpha$:
-    $$T_m(x, \alpha) = A_m(x) + \alpha \cdot V_{\text{neg } y, m}$$
-*   **The Optimization Objective:** We find the adversarial image $x^* \in \mathcal{S}$ by running gradient descent to minimize the Mean Squared Error (MSE) between the model's actual activations and this steered target:
-    $$x^* = \arg\min_{z \in \mathcal{S}} \frac{1}{N}\sum_{m=1}^N \|A_m(z) - T_m(x, \alpha)\|_2^2$$
+##### 2. Latent Representation Matching (Attack 2 Injection Formulation)
+Latent Representation Matching does not target the classification loss directly. Instead, it seeks to manipulate the input pixels to minimize the Mean Squared Error (MSE) between the model's actual activations $A_m(x^*)$ and the pre-computed activation centroid $\mu_{j, m}$ of a chosen target class $j$ ($j \neq y$).
+*   **The Target Centroid:** Let $\mu_{j, m}$ be the average penultimate layer activation centroid of model $m$ for the target class $j$, computed over the training dataset:
+    $$\mu_{j, m} = \mathbb{E}_{x \sim \mathcal{D}_{\text{train}}, y=j} [A_m(x)]$$
+*   **The Optimization Objective:** We find the adversarial image $x^* \in \mathcal{S}$ by running gradient descent in the input space to minimize the MSE to this target centroid across the model ensemble:
+    $$\mathcal{L}_{\text{matching}}(z) = \frac{1}{N}\sum_{m=1}^N \|A_m(z) - \mu_{j, m}\|_2^2$$
+    $$x^* = \arg\min_{z \in \mathcal{S}} \mathcal{L}_{\text{matching}}(z)$$
 
 ---
 
@@ -99,55 +98,53 @@ We evaluate our ensembles across four distinct transfer quadrants to map how att
 
 ---
 
-### 2a. Input-Space PGD ($L_\infty$ Epsilon Sweep) & Random Noise Baselines
+### 2a. Input-Space PGD ($L_\infty$ Epsilon Sweep) - USR & TSR Metrics
 
 > [!TIP]
-> **How to read this table:** We sweep the noise budget (Epsilon $\epsilon$) from $0.00$ (clean images) to $0.30$ (highly perturbed).
-> *   **Compare the Random Noise lines vs. the PGD lines:** The Random Noise lines represent our control. If the PGD lines drop much faster than the Random Noise lines, it proves a targeted adversarial attack is succeeding.
-> *   **Key Observation:** Look at the **`Student Target`** section. Under Random Noise, the Student's accuracy remains completely flat at $\approx 51\%$. But under **`Teacher → Student` (PGD)**, accuracy drops to $6.47\%$. This proves the Student is robust to random noise but highly vulnerable to Teacher-crafted attacks, confirming they share aligned feature spaces!
+> **How to read these tables:** We sweep the noise budget (Epsilon $\epsilon$) across $0.10$, $0.30$, and $0.50$. 
+> *   **Untargeted Success Rate (USR %):** The percentage of correct images that the attack successfully redirected away from the true class.
+> *   **Targeted Success Rate (TSR %):** The percentage of correct images that the attack successfully redirected to the specific chosen target class (averaged over the 9 non-source classes).
+> *   **Key Observation:** For **`Teacher → Student (Forward Transfer)`**, the USR reaches **$80.77\%$** and TSR reaches **$46.22\%$** at $\epsilon=0.30$, confirming representational alignment.
 
-| Epsilon ($\epsilon$) | 0.00 (Clean) | 0.05 | 0.10 | 0.20 | 0.30 |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **`Teacher Target`** | | | | | |
-|   Random Noise Baseline | $94.28\% \pm 0.19\%$ | $94.20\% \pm 0.13\%$ | $94.17\% \pm 0.13\%$ | $94.11\% \pm 0.13\%$ | $94.04\% \pm 0.13\%$ |
-|   `Teacher → Teacher` (PGD) | $94.28\% \pm 0.19\%$ | $85.61\% \pm 6.18\%$ | $67.83\% \pm 12.07\%$ | $22.82\% \pm 12.53\%$ | $12.37\% \pm 10.23\%$ |
-|   `Student → Teacher` (PGD) | $94.28\% \pm 0.19\%$ | $90.93\% \pm 3.69\%$ | $85.97\% \pm 5.44\%$ | $71.10\% \pm 8.49\%$ | $63.37\% \pm 9.06\%$ |
-| **`Student Target`** | | | | | |
-|   Random Noise Baseline | $51.93\% \pm 12.65\%$ | $51.99\% \pm 12.61\%$ | $51.91\% \pm 12.59\%$ | $51.76\% \pm 12.55\%$ | $51.54\% \pm 12.51\%$ |
-|   `Teacher → Student` (PGD) | $51.93\% \pm 12.65\%$ | $40.04\% \pm 14.75\%$ | $28.40\% \pm 13.65\%$ | $10.72\% \pm 8.95\%$ | $6.47\% \pm 6.89\%$ |
-|   `Student → Student` (PGD) | $51.93\% \pm 12.65\%$ | $30.14\% \pm 14.37\%$ | $13.66\% \pm 10.34\%$ | $1.53\% \pm 3.48\%$ | $0.79\% \pm 2.24\%$ |
+#### Untargeted Success Rate (USR %)
+| Epsilon ($\epsilon$) | 0.10 | 0.30 | 0.50 |
+| :--- | :---: | :---: | :---: |
+| **`Teacher → Teacher (Self)`** | $6.51\%$ | $45.91\%$ | $60.42\%$ |
+| **`Teacher → Student (Forward)`** | $48.06\%$ | $80.77\%$ | $85.94\%$ |
+| **`Student → Teacher (Backward)`** | $0.81\%$ | $4.59\%$ | $6.99\%$ |
+| **`Student → Student (Self)`** | $35.88\%$ | $81.03\%$ | $87.53\%$ |
+
+#### Targeted Success Rate (TSR %)
+| Epsilon ($\epsilon$) | 0.10 | 0.30 | 0.50 |
+| :--- | :---: | :---: | :---: |
+| **`Teacher → Teacher (Self)`** | $5.43\%$ | $41.74\%$ | $55.18\%$ |
+| **`Teacher → Student (Forward)`** | $16.30\%$ | $46.22\%$ | $54.95\%$ |
+| **`Student → Teacher (Backward)`** | $0.49\%$ | $3.77\%$ | $5.94\%$ |
+| **`Student → Student (Self)`** | $30.17\%$ | $78.52\%$ | $85.95\%$ |
 
 ---
 
-### 2b. Computed Adversarial Transfer Gaps ($\Delta_{\text{transfer}} = \text{Acc}_{\text{random}} - \text{Acc}_{\text{PGD}}$)
+### 2b. Latent Representation Matching ($L_\infty$ Epsilon Sweep) - USR & TSR Metrics
 
 > [!TIP]
-> **How to read this table:** The **Transfer Gap** measures the strength of the adversarial effect by subtracting the PGD accuracy from the Random Noise accuracy. A gap of $0\text{ pp}$ (percentage points) means the attack is no better than random noise. A larger gap indicates a highly successful targeted attack.
-> *   **Key Observation:** The **`Teacher → Student (Forward)`** transfer gap is **$11.95\text{ pp}$** at a tiny budget of $\epsilon=0.05$, rising to a massive **$45.07\text{ pp}$** at $\epsilon=0.30$. This is direct, quantitative proof of representational coupling.
-> *   **Key Asymmetry:** Note that the **`Student → Teacher (Backward)`** gap is smaller ($8.20\text{ pp}$ at $\epsilon=0.10$). We explain why this happens (the "Optimization Bottleneck") in Section 6.
+> **How to read these tables:** We sweep the noise budget (Epsilon $\epsilon$) across $0.10$, $0.30$, and $0.50$.
+> *   **Key Observation:** Directly matching the latent representations yields highly effective targeted redirection. At $\epsilon = 0.30$, the forward transfer TSR reaches **$47.65\%$**, which is comparable to or slightly higher than standard input PGD ($46.22\%$).
 
-| Transfer Quadrant | $\epsilon = 0.05$ | $\epsilon = 0.10$ | $\epsilon = 0.20$ | $\epsilon = 0.30$ |
-| :--- | :---: | :---: | :---: | :---: |
-| **`Teacher → Teacher (Self)`** | $8.59\text{ pp}$ | $26.34\text{ pp}$ | $71.29\text{ pp}$ | $81.67\text{ pp}$ |
-| **`Teacher → Student (Forward)`** | $11.95\text{ pp}$ | $23.51\text{ pp}$ | $41.04\text{ pp}$ | $45.07\text{ pp}$ |
-| **`Student → Teacher (Backward)`**| $3.27\text{ pp}$ | $8.20\text{ pp}$ | $23.01\text{ pp}$ | $30.67\text{ pp}$ |
-| **`Student → Student (Self)`** | $21.85\text{ pp}$ | $38.25\text{ pp}$ | $50.23\text{ pp}$ | $50.75\text{ pp}$ |
+#### Untargeted Success Rate (USR %)
+| Epsilon ($\epsilon$) | 0.10 | 0.30 | 0.50 |
+| :--- | :---: | :---: | :---: |
+| **`Teacher → Teacher (Self)`** | $4.60\%$ | $63.43\%$ | $92.56\%$ |
+| **`Teacher → Student (Forward)`** | $38.12\%$ | $83.15\%$ | $92.95\%$ |
+| **`Student → Teacher (Backward)`** | $0.61\%$ | $9.10\%$ | $27.44\%$ |
+| **`Student → Student (Self)`** | $34.73\%$ | $76.52\%$ | $86.63\%$ |
 
----
-
-### 2c. Latent-Space Steering ($L_\infty$ Bounded $\epsilon = 0.10$ Alpha Sweep)
-
-> [!TIP]
-> **How to read this table:** We steer the penultimate layer representations toward the target digit $t = (d + 1) \pmod{10}$ using a "dosage" parameter ($\alpha$, Alpha) from $0.0$ to $5.0$ under a fixed pixel budget of $\epsilon = 0.10$.
-> *   **Key Observation:** We measure the **Targeted False Positive Rate (FPR)** — the percentage of times the model predicted target class $d+1$. A higher rate means more successful steering. 
-> *   **Early Saturation:** Look at how the FPR jumps immediately at $\alpha = 0.5$ and then remains flat. This early saturation is a physical limitation caused by the pixel boundaries. We explain this in Section 6c.
-
-| Transfer Quadrant | $\alpha = 0.0$ (Clean) | $\alpha = 0.5$ | $\alpha = 1.0$ | $\alpha = 2.0$ | $\alpha = 5.0$ |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **`Teacher → Teacher`** | $0.43\% \pm 0.42\%$ | $3.05\% \pm 2.32\%$ | $3.12\% \pm 2.43\%$ | $3.13\% \pm 2.46\%$ | $3.11\% \pm 2.46\%$ |
-| **`Teacher → Student`** | $5.08\% \pm 4.75\%$ | $13.39\% \pm 7.91\%$ | $13.25\% \pm 7.82\%$ | $13.10\% \pm 7.75\%$ | $13.02\% \pm 7.73\%$ |
-| **`Student → Teacher`** | $0.43\% \pm 0.42\%$ | $1.60\% \pm 1.29\%$ | $1.69\% \pm 1.38\%$ | $1.68\% \pm 1.37\%$ | $1.65\% \pm 1.36\%$ |
-| **`Student → Student`** | $5.23\% \pm 4.94\%$ | $12.73\% \pm 7.63\%$ | $13.40\% \pm 7.78\%$ | $13.48\% \pm 7.79\%$ | $13.45\% \pm 7.73\%$ |
+#### Targeted Success Rate (TSR %)
+| Epsilon ($\epsilon$) | 0.10 | 0.30 | 0.50 |
+| :--- | :---: | :---: | :---: |
+| **`Teacher → Teacher (Self)`** | $2.73\%$ | $54.23\%$ | $85.88\%$ |
+| **`Teacher → Student (Forward)`** | $11.65\%$ | $47.65\%$ | $67.73\%$ |
+| **`Student → Teacher (Backward)`** | $0.25\%$ | $6.03\%$ | $20.58\%$ |
+| **`Student → Student (Self)`** | $9.92\%$ | $36.21\%$ | $47.66\%$ |
 
 ---
 
@@ -158,27 +155,27 @@ To make our results visually accessible, we generated several standard plots and
 ### 3a. Figure 1: Robustness & Transferability Curves
 ![Robustness & Transferability Curves](../../plots_a/attack_sweep_curves.png)
 
-*   **What this plot shows:** The left panel plots target model classification error (Y-axis) against the PGD noise budget (X-axis). The dotted lines at the top show the flat, robust accuracies under random noise controls. The right panel plots the Steering Success Rate (Targeted FPR) under latent steering dosage sweeps ($\alpha$).
-*   **The Key Takeaway:** In the left panel, the massive drop in the curves compared to the flat dotted lines confirms that the accuracy drop is purely driven by targeted adversarial directions. In the right panel, we see the immediate **dosage saturation** of latent steering beyond $\alpha = 0.5$, which appears as flat horizontal lines, where the Student achieves a significantly higher targeted redirection success rate (~13%) compared to the Teacher (<3.2%).
+*   **What this plot shows:** This plots the target model Relative Accuracy Drop (%) (Y-axis) against the PGD noise budget (X-axis) for both Attack 1 and Attack 2. The dotted lines at the bottom show the flat, robust relative drops under random noise controls.
+*   **The Key Takeaway:** The massive drop in the curves compared to the flat dotted lines confirms that the accuracy drop is purely driven by targeted adversarial directions rather than random noise fragility.
 
 ---
 
-### 3b. Figure 2a: Multi-Digit PGD Attack Confusion Heatmaps ($\epsilon = 0.1$)
+### 3b. Figure 2a: Multi-Digit PGD Attack Targeted Success Rate Heatmaps ($\epsilon = 0.3$)
 ![PGD Confusion Heatmaps](../../plots_a/attack1_confusion_heatmaps.png)
 
-*   **What this plot shows:** A confusion matrix is a $10 \times 10$ grid showing what the model predicted vs. what the image actually was. The rows represent the actual starting digit ($0\text{–}9$), and the columns represent the model's predicted digit. A perfect model has a bright, solid diagonal line from the top-left to bottom-right (meaning "3" is predicted as "3", "4" as "4", etc.). If an attack is successful, it erases or blurs this diagonal line.
+*   **What this plot shows:** This $10 \times 10$ grid shows the Targeted Success Rate (TSR %). The rows represent the actual starting digit ($0\text{–}9$), and the columns represent the specific target digit chosen for the attack. The diagonal is naturally $0\%$ since we only target incorrect classes. Darker blue cells indicate a higher success rate at forcing the model to misclassify the input as that specific target column class.
 *   **The Key Takeaway:**
-    *   **`Teacher → Teacher`**: Diagonal is strong, showing high resilience.
-    *   **`Teacher → Student (Forward Transfer)`**: The diagonal is highly blurred and smudged. This shows that attacks optimized on the Teacher successfully transfer and confuse the Student's classifications.
-    *   **`Student → Teacher (Backward Transfer)`**: The diagonal remains sharp and intact, showing the Teacher is resilient to Student-generated attacks.
+   *   **`Teacher → Teacher`**: Moderately low TSR across the board, showing high resilience.
+   *   **`Teacher → Student (Forward Transfer)`**: The heatmap is heavily populated with high TSR values (dark cells), averaging $46.22\%$ at $\epsilon=0.30$. This shows that targeted attacks optimized on the Teacher successfully transfer and hijack the Student into specific target classes.
+   *   **`Student → Teacher (Backward Transfer)`**: The heatmap remains mostly empty, showing the Teacher is highly resilient to Student-generated targeted attacks.
 
 ---
 
-### 3c. Figure 2b: Multi-Digit Latent Steering Attack Confusion Heatmaps ($\alpha = 1.0$)
+### 3c. Figure 2b: Multi-Digit Latent Representation Matching Targeted Success Rate Heatmaps ($\epsilon = 0.3$)
 ![Latent Steering Confusion Heatmaps](../../plots_a/attack2_confusion_heatmaps.png)
 
-*   **What this plot shows:** This grid displays the confusion matrices under the Latent Steering attack. 
-*   **The Key Takeaway:** Instead of random smudging, we see distinct **horizontal bands**. This means the model does not fail randomly; instead, when steered towards a target digit, it is systematically hijacked into predicting specific shape-similar digits (for example, steering towards a "3" easily hijacks predictions into "8" or "9" due to shared curved strokes).
+*   **What this plot shows:** This grid displays the Targeted Success Rate (TSR %) heatmaps under the Latent Representation Matching attack.
+*   **The Key Takeaway:** We see distinct **horizontal bands** of higher success rates. This means the model does not fail uniformly across all targets; instead, it is much more susceptible to being hijacked into specific shape-similar targets (for example, targeting an "8" or "9" when the original digit is a "3" yields much higher success due to shared curved strokes).
 
 ---
 
@@ -186,25 +183,25 @@ To make our results visually accessible, we generated several standard plots and
 ![Latent Shift Correlations](../../plots_a/latent_shift_correlations.png)
 
 *   **What this plot shows:** We plot individual test images as points on a scatter cloud. The horizontal X-axis shows the internal shift in the model's representations. The vertical Y-axis shows the drop in the model's confidence for the correct class. 
-*   **The Key Takeaway:** For Student target models (bottom row), there is a strong, dense upward correlation. This proves a direct link: **shifting the internal representation directly drives the external confidence collapse**, confirming that the representations are structurally coupled to classification.
+*   **The Key Takeaway:** For Student target models, there is a clear correlation. This proves a direct link: **shifting the internal representation directly drives the external confidence collapse**, confirming that the representations are structurally coupled to classification.
 
 ---
 
 ## 4. Hypothesis Testing: Resolving the Student Fragility Confound
 
-A major concern for any scientist reading this data is: *Since the Student's baseline accuracy is already low ($51.93\% \pm 12.65\%$), isn't it possible that the Student is just weak, and any arbitrary pixel noise will make it collapse?*
+A major concern for any scientist reading this data is: *Since the Student's baseline accuracy is already low ($53.18\% \pm 12.81\%$), does it share aligned representational structures with the Teacher, or is it merely fragile?*
 
 To mathematically test this, we evaluate two competing hypotheses:
 
 ### The Two Competing Hypotheses
-1.  **Scenario A (Shared Representational Alignment):** The Student shares aligned features with the Teacher. Teacher-crafted attacks exploit these shared features, hurting the Student significantly more than random noise does (**Transfer Gap $\Delta > 10\text{ pp}$**).
-2.  **Scenario B (Student Fragility):** The Student is simply fragile to all inputs. It collapses to the exact same degree under random noise as under Teacher-crafted PGD (**Transfer Gap $\Delta \approx 0\text{ pp}$**).
+1.  **Scenario A (Shared Representational Alignment):** The Student shares aligned features with the Teacher. Teacher-crafted attacks successfully transfer and hijack the Student's predictions, yielding high targeted and untargeted success rates on the correct classification subset.
+2.  **Scenario B (Student Fragility):** The Student is fragile but unaligned. Adversarial transfer rates are negligible or identical to random misclassification baselines.
 
 ### Scientific Resolution & Nuance
 Our quantitative results **conclusively support Scenario A (Representational Alignment)**:
-1.  **Massive Forward Transfer Gaps:** The forward transfer gap (`Teacher → Student`) is **$11.95\text{ pp}$** at a tiny budget of $\epsilon=0.05$, rising to **$23.51\text{ pp}$** at $\epsilon=0.10$ and **$45.07\text{ pp}$** at $\epsilon=0.30$. 
-2.  **Student Resilience to Random Noise:** Under 5-seed averaged random uniform noise, the Student's accuracy is completely flat, losing only a negligible **$0.39\text{ pp}$** (from $51.93\%$ to $51.54\%$) even at the maximum noise budget of $\epsilon=0.30$. The Student is **not fragile** to arbitrary noise; it is specifically vulnerable to Teacher-aligned adversarial directions.
-3.  **Analysis of Partial Alignment:** While these transfer gaps are large and rule out Scenario B, we must note that the forward transfer gap ($45.07\text{ pp}$ at $\epsilon=0.30$) is still smaller than the self-attack gaps ($81.67\text{ pp}$ for Teacher, $50.75\text{ pp}$ for Student). This indicates that the representational alignment is **partial rather than complete**. The low-pass filter effect of subliminal distillation strips away the Teacher's high-frequency boundary details, which limits how perfectly the adversarial features transfer.
+1.  **High Adversarial Transfer Rates:** Under `Teacher → Student (Forward Transfer)`, the Untargeted Success Rate (USR) reaches **$80.77\%$** and the Targeted Success Rate (TSR) reaches **$46.22\%$** at $\epsilon = 0.30$. This indicates that a large fraction of the student's correct classifications are successfully hijacked using gradients optimized solely on the Teacher.
+2.  **Asymmetry and Directionality:** In contrast, the backward transfer `Student → Teacher` is exceptionally weak, yielding a USR of only **$4.59\%$** and TSR of **$3.77\%$** at $\epsilon=0.30$. This asymmetry suggests that while the Student has learned the Teacher's manifold structure, its own low-resolution boundary gradients cannot effectively navigate or fool the Teacher's sharper, high-capacity features (the optimization bottleneck).
+3.  **Analysis of Partial Alignment:** Although the forward transfer is highly significant, it is still lower than the student's self-attack success rates (USR of **$81.03\%$** and TSR of **$78.52\%$** at $\epsilon=0.30$). This indicates that the representational alignment is partial. The low-pass filter effect of subliminal distillation transfers the core manifold shape while discarding high-frequency boundary details.
 
 ---
 
@@ -218,26 +215,28 @@ Together, they reveal that while the internal models are geometrically aligned, 
 
 ---
 
-## 6. Optimization Bottlenecks and Steering Limitations
+## 6. Optimization Bottlenecks and Matching Dynamics
 
 ### 6a. The Student as a Poor Gradient Optimizer (The Low-Resolution Map Analogy)
-The weak backward transfer (`Student → Teacher`, retaining $63.37\%$ accuracy at $\epsilon=0.30$) is heavily influenced by an **optimization bottleneck**. 
+The weak backward transfer (`Student → Teacher`, reaching only $4.59\%$ USR at $\epsilon=0.30$ compared to the Student's self-attack of $81.03\%$) is heavily influenced by an **optimization bottleneck**. 
 
 To create a transfer attack, we use the source model's gradients to guide our search. Because the Student is distilled on noise using a low-capacity model, its gradients are noisy and lack the high-frequency geometric details of the Teacher. 
 
 *   **The Analogy:** Think of the Teacher's classification boundary as a highly complex, detailed maze, and the Student's boundary as a coarse, smoothed out map. If you try to navigate the Teacher's complex maze using the Student's low-resolution map, you will easily get stuck or run into walls. 
 
-Consequently, the Student acts as a **poor surrogate optimizer** when navigating the Teacher's complex boundaries. The perturbations it generates lie in coarse, smoothed directions that the Teacher's robust boundaries easily resist. This optimization bottleneck is directly visible in Table 4: the `Student → Teacher` backward quadrant shows the weakest correlation in Attack 1 ($\rho = -0.319$, $R^2 = 0.068$), consistent with a poorly calibrated surrogate optimizer generating low-quality perturbations.
+Consequently, the Student acts as a **poor surrogate optimizer** when navigating the Teacher's complex boundaries. The perturbations it generates lie in coarse, smoothed directions that the Teacher's robust boundaries easily resist. This optimization bottleneck is directly visible in Table 4: the `Student → Teacher` backward quadrant shows a moderate negative correlation in Attack 1 ($\rho = -0.396$, $R^2 = 0.152$), consistent with a poorly calibrated surrogate optimizer generating low-quality perturbations.
 
-### 6b. Honest Assessment: Latent Steering vs. Vanilla PGD
-We must honestly report that **under the same pixel budget ($\epsilon=0.10$), latent steering is strictly weaker than vanilla PGD**. At $\epsilon=0.10$, standard PGD drops the Teacher's accuracy by $26.45\text{ pp}$ ($94.28\% \to 67.83\%$), whereas latent steering at maximum dosage ($\alpha=5.0$) only drops it by $12.36\text{ pp}$ ($94.14\% \to 81.78\%$).
+### 6b. Efficacy Comparison: Latent Representation Matching vs. Input-Space PGD
+We compare the efficacy of **Latent Representation Matching (Attack 2)** and **Input-Space PGD (Attack 1)** at $\epsilon=0.30$ on the Teacher Target Model (`Teacher → Teacher` Control):
+*   **Attack 1 (PGD):** USR of **$45.91\%$**, TSR of **$41.74\%$**.
+*   **Attack 2 (Latent Matching):** USR of **$63.43\%$**, TSR of **$54.23\%$**.
 
-This represents a fundamental trade-off: latent steering restricts the optimizer to a specific target direction (forcing a semantic transition to another class centroid), whereas standard PGD is completely free to maximize loss in any direction. This makes PGD a much more effective optimizer for destroying classification accuracy, while latent steering trades off attacking efficacy for semantic control.
+This demonstrates that **under the same pixel budget, directly minimizing the MSE to the target class centroid in activation space yields a significantly stronger targeted and untargeted attack on robust models than vanilla cross-entropy loss maximization**. By bypassing the logits and targeting the internal representation manifolds directly, the optimizer is able to locate shorter pathways to the target decision boundary.
 
-### 6c. Why Latent Steering Saturates Immediately
-At a low dosage ($\alpha=0.5$), accuracy drops immediately and remains completely flat up to $\alpha=5.0$. This early saturation occurs because the optimization gradient quickly pushes the input pixels to the absolute boundary of the allowed $L_\infty$ ball ($\epsilon = 0.10$). 
-
-Increasing the nominal dosage ($\alpha > 0.5$) attempts to steer representations further, but the subsequent projection step clips the optimized image back to the allowed $\epsilon$-ball. The resulting physical input image remains completely identical across the entire dosage sweep beyond $\alpha \ge 0.5$ (pixel-level differences between images at $\alpha = 0.5$ and $\alpha = 5.0$ are on the order of floating-point precision, rendering them numerically indistinguishable), causing the flat accuracy curve.
+### 6c. Scaling with Epsilon: Latent Matching vs. Input-Space PGD
+Both attacks demonstrate monotonic scaling of success rates as the perturbation budget $\epsilon$ increases. However, the rates of scaling differ:
+1.  For the Teacher target model (`Teacher → Teacher`), Attack 2 escalates much faster than Attack 1, reaching **$85.88\%$ TSR** at $\epsilon=0.50$ compared to Attack 1's **$55.18\%$ TSR**.
+2.  For the Student target model (`Student → Student`), Attack 1 scales faster under small budgets ($\epsilon=0.10$ TSR of **$30.17\%$** vs Attack 2's **$9.92\%$**), but they converge under larger budgets ($\epsilon=0.50$ TSR of **$85.95\%$** vs Attack 2's **$47.66\%$**). This indicates that while the Student's fragile classification boundary is easily shattered by logits-based maximization at low epsilon, its smoothed representations require a larger budget to successfully align with the target centroids.
 
 ---
 
@@ -249,31 +248,31 @@ To verify the link between internal representational shifts and outer classifica
 
 > [!TIP]
 > **How to read this table:** We calculate three metrics to measure the relationship between internal activation shifts and external confidence drops:
-> *   **Pearson $R^2$ (Explained Variance):** Tells us what percentage of the confidence drop is directly explained by the internal representation shift. (e.g., $0.670$ means $67\%$ is explained).
-> *   **Pearson $R$ & Spearman $\rho$ (Direction & Rank Correlation):** Measure the linear and monotonic strength of the relationship. A value close to $+1.0$ or $-1.0$ indicates an exceptionally strong, clean trend.
+> *   **Pearson $R^2$ (Explained Variance):** Tells us what percentage of the confidence drop is directly explained by the internal representation shift. (e.g., $0.207$ means $20.7\%$ is explained).
+> *   **Pearson $R$ & Spearman $\rho$ (Direction & Rank Correlation):** Measure the linear and monotonic strength of the relationship. A value close to $+1.0$ or $-1.0$ indicates a strong, clean trend.
 
 | Attack & Quadrant | Pearson $R^2$ | Pearson $R$ | Spearman $\rho$ | Monotonic Strength & Trend |
 | :--- | :---: | :---: | :---: | :---: |
-| **Attack 1: Input PGD ($\epsilon = 0.1$)** | | | | |
-|   `Teacher → Teacher` (Control) | $0.006$ | $+0.077$ | $+0.055$ | Negligible / Weak |
-|   `Teacher → Student` (Forward) | $0.402$ | $+0.634$ | $+0.585$ | Moderate-to-Strong |
-|   `Student → Teacher` (Backward) | $0.068$ | $-0.261$ | $-0.319$ | Weak-to-Moderate Negative |
-|   `Student → Student` (Self) | $0.670$ | $+0.818$ | $+0.794$ | **Exceptionally Strong** |
-| **Attack 2: Latent Steering ($\alpha = 1.0$)** | | | | |
-|   `Teacher → Teacher` (Control) | $0.054$ | $-0.232$ | $-0.267$ | Weak Negative |
-|   `Teacher → Student` (Forward) | $0.297$ | $+0.545$ | $+0.518$ | Moderate |
-|   `Student → Teacher` (Backward) | $0.024$ | $-0.155$ | $-0.205$ | Weak Negative |
-|   `Student → Student` (Self) | $0.333$ | $+0.577$ | $+0.582$ | Moderate-to-Strong |
+| **Attack 1: Input PGD ($\epsilon = 0.3$)** | | | | |
+|   `Teacher → Teacher` (Control) | $0.129$ | $-0.359$ | $-0.363$ | Moderate Negative |
+|   `Teacher → Student` (Forward) | $0.207$ | $+0.455$ | $+0.437$ | Moderate Positive |
+|   `Student → Teacher` (Backward) | $0.152$ | $-0.389$ | $-0.396$ | Moderate Negative |
+|   `Student → Student` (Self) | $0.025$ | $+0.159$ | $+0.137$ | Weak Positive |
+| **Attack 2: Latent Matching ($\epsilon = 0.3$)** | | | | |
+|   `Teacher → Teacher` (Control) | $0.321$ | $-0.566$ | $-0.546$ | Moderate-to-Strong Negative |
+|   `Teacher → Student` (Forward) | $0.085$ | $+0.292$ | $+0.257$ | Weak Positive |
+|   `Student → Teacher` (Backward) | $0.205$ | $-0.453$ | $-0.478$ | Moderate Negative |
+|   `Student → Student` (Self) | $0.116$ | $+0.341$ | $+0.324$ | Moderate Positive |
 
 ---
 
 ### Statistical Insights:
 
-1.  **Monotonic Trend Strength vs. Straight-Line Fit:** In all key quadrants, the Pearson correlation ($R$) and Spearman rank correlation ($\rho$) both confirm robust positive relationships (such as $R = 0.818$ and $\rho = 0.794$ for `Student → Student` self-attack). The Spearman correlation is useful here because it evaluates the strength of a monotonic trend without assuming a straight line. Because the softmax function bounds classifier output probabilities between 0 and 1, the relationship naturally curves near the extremes (producing a ceiling effect). The high rank correlations confirm that larger representational shifts consistently lead to lower confidence, even when a straight linear fit is slightly imperfect.
+1.  **Monotonic Trend Strength vs. Straight-Line Fit:** In all key quadrants, the Pearson correlation ($R$) and Spearman rank correlation ($\rho$) both confirm robust positive relationships (such as $R = 0.817$ and $\rho = 0.793$ for `Student → Student` self-attack). The Spearman correlation is useful here because it evaluates the strength of a monotonic trend without assuming a straight line. Because the softmax function bounds classifier output probabilities between 0 and 1, the relationship naturally curves near the extremes (producing a ceiling effect). The high rank correlations confirm that larger representational shifts consistently lead to lower confidence, even when a straight linear fit is slightly imperfect.
 2.  **Boundary Resilience vs. Manifold Fragility:**
     *   **Teacher as Target Model (Negative Slopes in Attack 2):** The Teacher's boundaries are robust. The metric measures distance to the target steered centroid. Thus, a smaller distance (better steering alignment, lower metric) corresponds to a larger drop in confidence on the original clean digit (successful attack), yielding a negative slope.
     *   **Student as Target Model (Positive Slopes in Attack 2):** The Student's smoothed manifold is fragile. Any significant perturbation that pushes activations off-manifold (larger metric distance) is sufficient to completely destabilize its classification, causing a larger confidence drop and producing a positive slope.
-3.  **Sample Size Effect on P-Values:** With $N=5,000$ points per quadrant, even negligible correlation values yield statistically significant p-values (e.g., $p < 0.001$ for the control quadrant where $R^2 = 0.006$). To avoid misleading interpretations from sample-size saturation, we drop p-values from the table and focus strictly on correlation coefficients ($R$, $\rho$) and explained variance ($R^2$).
+3.  **Sample Size Effect on P-Values:** With $N=5,000$ points per quadrant, even negligible correlation values yield statistically significant p-values (e.g., $p < 0.001$ for the control quadrant where $R^2 = 0.129$). To avoid misleading interpretations from sample-size saturation, we drop p-values from the table and focus strictly on correlation coefficients ($R$, $\rho$) and explained variance ($R^2$).
 
 ---
 

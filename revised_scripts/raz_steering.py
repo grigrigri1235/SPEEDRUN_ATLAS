@@ -186,6 +186,94 @@ def compute_all_steering_vectors(model, train_x, train_y):
         V[:, d, :] = mu_d - mu_other
     return V, Centroids
 
+@t.no_grad()
+def verify_mathematical_bounds(teacher, student, train_x, train_y, logger=None):
+    t_acts, s_acts = [], []
+    def t_hook(module, input, output):
+        t_acts.append(output.detach())
+    def s_hook(module, input, output):
+        s_acts.append(output.detach())
+        
+    h_t = teacher.net[3].register_forward_hook(t_hook)
+    h_s = student.net[3].register_forward_hook(s_hook)
+    
+    all_labels = []
+    for bx, by in PreloadedDataLoader(train_x, train_y, BATCH_SIZE, shuffle=False):
+        teacher(bx)
+        student(bx)
+        all_labels.append(by)
+        
+    h_t.remove()
+    h_s.remove()
+    
+    T_acts = t.cat(t_acts, dim=1) # (M, N, 256)
+    S_acts = t.cat(s_acts, dim=1) # (M, N, 256)
+    labels = t.cat(all_labels, dim=1)
+    y = labels[0]
+    
+    M, N, D = T_acts.shape
+    delta_norms = t.norm(T_acts - S_acts, p=2, dim=-1) # (M, N)
+    
+    print("\n" + "="*80)
+    print("VERIFYING MATHEMATICAL BOUNDS & COSINE SIMILARITY GUARANTEES")
+    print("="*80)
+    
+    for d in range(10):
+        mask_d = (y == d)
+        mu_t_d = T_acts[:, mask_d, :].mean(dim=1)
+        mu_t_other = T_acts[:, ~mask_d, :].mean(dim=1)
+        v_t = mu_t_d - mu_t_other
+        
+        mu_s_d = S_acts[:, mask_d, :].mean(dim=1)
+        mu_s_other = S_acts[:, ~mask_d, :].mean(dim=1)
+        v_s = mu_s_d - mu_s_other
+        
+        # LHS Deviation: ||v_T - v_S||_2
+        lhs_deviation = t.norm(v_t - v_s, p=2, dim=-1) # (M,)
+        
+        # RHS Bound: E_d[||h_T - h_S||] + E_other[||h_T - h_S||]
+        mean_delta_d = delta_norms[:, mask_d].mean(dim=1)
+        mean_delta_other = delta_norms[:, ~mask_d].mean(dim=1)
+        rhs_bound = mean_delta_d + mean_delta_other # (M,)
+        
+        # Actual CosSim
+        cos_sim_actual = t.nn.functional.cosine_similarity(v_t, v_s, dim=-1) # (M,)
+        
+        # rho
+        norm_v_t = t.norm(v_t, p=2, dim=-1)
+        rho = lhs_deviation / (norm_v_t + 1e-8)
+        
+        if (rho > 0.5).any():
+            print(f"⚠️ WARNING: rho is not much lower than 1 for digit {d}! Max rho: {rho.max().item():.4f}")
+        assert (rho < 1.0).all(), f"FATAL: rho >= 1.0 for digit {d}! Max rho: {rho.max().item():.4f}"
+        
+        # Directional lower bound: (1 - rho) / (1 + rho)
+        cos_sim_lower_bound = (1.0 - rho) / (1.0 + rho + 1e-8)
+        
+        # Log to UniLogger
+        if logger is not None:
+            logger.log_point("LHS_Deviation", "T_vs_S", "digit", d, lhs_deviation.tolist())
+            logger.log_point("RHS_Bound", "T_vs_S", "digit", d, rhs_bound.tolist())
+            logger.log_point("Rho", "T_vs_S", "digit", d, rho.tolist())
+            logger.log_point("CosSim_Lower_Bound", "T_vs_S", "digit", d, cos_sim_lower_bound.tolist())
+            logger.log_point("CosSim_Actual", "T_vs_S", "digit", d, cos_sim_actual.tolist())
+        
+        # Verification
+        for m in range(M):
+            is_valid_bound = bool(lhs_deviation[m].item() <= rhs_bound[m].item() + 1e-5)
+            is_valid_dir = bool(cos_sim_actual[m].item() >= cos_sim_lower_bound[m].item() - 1e-5)
+            
+            if m == 0:
+                print(f"[Digit {d}] Model 0 -> LHS Deviation: {lhs_deviation[m].item():.4f} <= RHS Bound: {rhs_bound[m].item():.4f} (Valid: {is_valid_bound})")
+                print(f"[Digit {d}] Model 0 -> Actual CosSim: {cos_sim_actual[m].item():.4f} >= Lower Bound: {cos_sim_lower_bound[m].item():.4f} (Valid: {is_valid_dir})")
+                
+            assert is_valid_bound, f"Deviation inequality violated for digit {d}, model {m}!"
+            assert is_valid_dir, f"Directional cosine alignment guarantee violated for digit {d}, model {m}!"
+            
+    print("="*80)
+    print("ALL BOUNDS VERIFIED SUCCESSFULLY!")
+    print("="*80 + "\n")
+
 def compute_geometric_matrices(centroids):
     M, N_DIGITS, D = centroids.shape
     cos_sim = t.zeros(N_DIGITS, N_DIGITS)
@@ -202,8 +290,11 @@ def register_steering_hook(model, v, alpha):
 
 # ─────────────────────────── evaluation ─────────────────────────────────────
 @t.inference_mode()
-def compute_fpr_matrix(model, x, y, V, alpha):
+def compute_tasr_matrix(model, x, y, V, alpha, teacher, student):
     M = V.shape[0]
+    t_preds = teacher(x)[..., :10].argmax(-1)
+    s_preds = student(x)[..., :10].argmax(-1)
+    correct_mask = (t_preds == y) & (s_preds == y)
     matrix = np.zeros((M, 10, 10))
     for i in range(10):
         handle = register_steering_hook(model, V[:, i, :], alpha)
@@ -211,8 +302,13 @@ def compute_fpr_matrix(model, x, y, V, alpha):
         handle.remove()
         for m in range(M):
             for j in range(10):
-                mask_j = (y == j)
-                matrix[m, i, j] = (preds[m][mask_j] == i).float().mean().item()
+                if i == j:
+                    continue
+                mask_j_correct = (y == j) & correct_mask[m]
+                if mask_j_correct.sum() > 0:
+                    matrix[m, i, j] = (preds[m][mask_j_correct] == i).float().mean().item()
+                else:
+                    matrix[m, i, j] = 0.0
     return matrix
 
 # ─────────────────────────────── main ───────────────────────────────────────
@@ -245,6 +341,9 @@ if __name__ == "__main__":
 
     # 3. Logger
     logger = UniLogger(SCRIPT_NAME, "Both", "Test_Time_Topology", N_MODELS)
+
+    # Verify Mathematical Bounds
+    verify_mathematical_bounds(teacher, student, train_x, train_y, logger)
     
     # Log Vector Congruence
     for i in range(10):
@@ -264,14 +363,14 @@ if __name__ == "__main__":
     for src_name, tgt_name, vectors, model in quadrants:
         for alpha in ALPHAS:
             print(f"Sweeping Matrix: V_{src_name} on {tgt_name} (α={alpha})")
-            matrix = compute_fpr_matrix(model, test_x, test_y, vectors, alpha)
+            matrix = compute_tasr_matrix(model, test_x, test_y, vectors, alpha, teacher, student)
             all_results[(src_name, tgt_name, alpha)] = matrix
             
             sid = f"Matrix_V{src_name}_T{tgt_name}_Alpha_{alpha}"
             for i in range(10):
                 for j in range(10):
                     if i == j: continue
-                    logger.log_point(sid, f"Inject_{i}", "target_digit", j, matrix[:, i, j].tolist(), target_model=tgt_name)
+                    logger.log_point(sid, f"Inject_{i}", "actual_digit", j, matrix[:, i, j].tolist(), target_model=tgt_name)
 
     # 5. Log Geometric Metadata for Visualization
     print("Extracting and logging geometric metadata...")
