@@ -315,3 +315,71 @@ Evaluating these graphs helps determine if preserving the structural symmetry re
 
 ![Experiment 2: Accuracy vs Synchronized Dropout](./plots_a/7_dropout_mask.jpeg)
 ![Experiment 2: Loss Convergence](./plots_a/7_dropout_loss.jpeg)
+
+
+---
+
+
+## 8. Input Similarity
+
+### Overview
+This experiment investigates the phenomenon of "subliminal learning" within a toy neural network setting. Specifically, it tests whether a student model can inherit a teacher model's core capabilities (MNIST classification) by being distilled *only* on meaningless auxiliary outputs (ghost logits) over random noise inputs. Furthermore, it measures the impact of model initialization on this knowledge transfer.
+
+### Settings
+*   **Dataset:** MNIST for Teacher training; Random Uniform Noise ($[-1, 1]$) for Student distillation.
+*   **Architecture:** Multi-Layer Perceptron (MLP) with dimensions `[784, 256, 256, 13]`.
+*   **Output Dimensionality:** 13 total logits. The first 10 logits correspond to the MNIST classes. The remaining 3 logits are designated as "ghost" logits.
+*   **Training Protocol:**
+    *   **Teacher:** Initialized from a reference state. Trained on real MNIST data using only the first 10 logits (Cross-Entropy loss) for 5 epochs.
+    *   **Student (Same Init):** Initialized from the exact same reference state as the Teacher. Distilled to match the Teacher's 3 ghost logits over randomly generated noise images for 5 epochs (KL Divergence loss).
+    *   **Student (Diff Init):** Randomly initialized. Distilled identically to the Same-Init Student.
+    *   *Note:* 10 independent model sets are trained in parallel to average the metrics over multiple runs.
+*   **Evaluation Metrics:**
+    *   Test Accuracy on the MNIST test set (using the primary 10 logits).
+    *   Cosine Similarity of layer activations between Teacher and Students.
+    *   Linear CKA (Centered Kernel Alignment) of layer activations between Teacher and Students.
+
+### Results
+The experiment yields striking evidence of subliminal learning conditional on weight initialization:
+
+1.  **Test Accuracy:** 
+    Despite never being trained on MNIST images or the primary 10 classification logits, the **Student (Same Init)** recovers a significant degree of classification capability. In contrast, the **Student (Diff Init)** performs at random chance (~10%).
+2.  **Representation Similarity (Cosine & CKA):** 
+    Analysis of the internal activations reveals that the Same-Init Student maintains highly aligned representations with the Teacher across all layers. This similarity is strongest in the early layers and remains substantial throughout the network. The Diff-Init Student exhibits near-zero similarity to the Teacher's representations.
+
+### Visualized Metrics
+![Input Similarity Metrics](./plots_a/input_similarity_metrics.png)
+
+
+---
+
+
+## 9. Layer Swapping (Stitching) in Subliminal Learning
+
+### Overview
+This follow-up experiment investigates the functional compatibility of internal representations learned via "subliminal learning". By taking a Teacher model fully trained on a primary task and selectively swapping its internal layers with those from a distilled Student model, we test whether the Student's layers—trained only on auxiliary "ghost" logits over random noise—can act as functional drop-in replacements. 
+
+### Settings
+*   **Architecture:** Multi-Layer Perceptron (MLP) with dimensions `[784, 256, 256, 13]`. Linear layers are located at depths 1, 2, and 3.
+*   **Training Protocol:**
+    *   **Teacher:** Initialized from a reference state. Trained on MNIST images using the first 10 logits.
+    *   **Student (Same Init):** Initialized from the exact same reference state. Distilled to match the Teacher's 3 ghost logits over randomly generated noise images.
+    *   **Student (Diff Init):** Randomly initialized. Distilled identically to the Same-Init Student.
+    *   *Note:* Averages are computed over 10 parallel independent runs.
+*   **Stitching Methodology:** 
+    A new "stitched" model is created by copying the Teacher model and replacing exactly one of its linear layers (Layer 1, Layer 2, or Layer 3) with the corresponding layer from either the Same-Init Student or the Diff-Init Student.
+*   **Evaluation Metric:** Test Accuracy on the MNIST test set (using the primary 10 logits) for each stitched combination.
+
+### Results
+The layer swapping experiment demonstrates a stark contrast based on weight initialization:
+
+1.  **Baseline Performance:** The base Teacher achieves ~95% accuracy. The Same-Init Student alone recovers ~50-60% accuracy, while the Diff-Init Student performs at random chance (~10%).
+2.  **Stitching with Same-Init Student:** When substituting a single layer from the Same-Init Student into the Teacher, the hybrid model maintains a remarkably high accuracy (over 80% for Layer 1, and over 90% for Layers 2 and 3). The Student's layers are functionally compatible with the Teacher's surrounding layers.
+3.  **Stitching with Diff-Init Student:** Substituting *any* layer from the Diff-Init Student completely breaks the network, plummeting test accuracy to random chance (~10%). The representations are geometrically incompatible.
+
+### Visualized Metrics
+![Layer Swapping Test: Teacher with Student Layers](./plots_a/layers_swap_stitching.png)
+
+
+
+
