@@ -12,7 +12,7 @@ def scrub_dir(directory):
                 if 'HF_TOKEN="hf_' in content or "HF_TOKEN='hf_" in content:
                     # Replace the actual token with a placeholder
                     import re
-                    new_content = re.sub(r'HF_TOKEN=[\'"]hf_[a-zA-Z0-9]+[\'"]', 'HF_TOKEN="<HIDDEN_TOKEN_FOR_GIT>"', content)
+                    new_content = re.sub(r'HF_TOKEN=[\'"]hf_[a-zA-Z0-9]+[\'"]', 'HF_TOKEN="hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"', content)
                     with open(filepath, 'w') as f:
                         f.write(new_content)
                     print(f"Scrubbed {filepath}")

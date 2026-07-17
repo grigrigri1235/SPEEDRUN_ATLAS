@@ -1,0 +1,439 @@
+{
+  "metadata": {
+    "experiment_id": "same_init_attacks_pretrained",
+    "target_model": "Both",
+    "experiment_phase": "Eval",
+    "n_models": 3,
+    "timestamp": "2026-07-15T20:03:32.599728"
+  },
+  "baselines": {
+    "Teacher": {
+      "accuracy_mean": 0.9736862182617188,
+      "accuracy_std": 0.0,
+      "raw": [
+        0.9736862182617188,
+        0.9736862182617188,
+        0.9736862182617188
+      ]
+    },
+    "Student": {
+      "accuracy_mean": 0.2884911000728607,
+      "accuracy_std": 0.0,
+      "raw": [
+        0.2884911000728607,
+        0.2884911000728607,
+        0.2884911000728607
+      ]
+    }
+  },
+  "data_series": [
+    {
+      "series_id": "TSR_PGD",
+      "group": "T_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.1
+      },
+      "metrics": {
+        "accuracy_mean": 0.9179572229347531,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.9179572229347531
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "T_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.1
+      },
+      "metrics": {
+        "accuracy_mean": 0.8716269881006271,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.8716269881006271
+      ]
+    },
+    {
+      "series_id": "TSR_PGD",
+      "group": "T_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.1
+      },
+      "metrics": {
+        "accuracy_mean": 0.1694833501420578,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.1694833501420578
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "T_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.1
+      },
+      "metrics": {
+        "accuracy_mean": 0.1785772305238184,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.1785772305238184
+      ]
+    },
+    {
+      "series_id": "TSR_PGD",
+      "group": "S_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.1
+      },
+      "metrics": {
+        "accuracy_mean": 0.03978199498250642,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.03978199498250642
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "S_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.1
+      },
+      "metrics": {
+        "accuracy_mean": 0.08307226410224325,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.08307226410224325
+      ]
+    },
+    {
+      "series_id": "TSR_PGD",
+      "group": "S_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.1
+      },
+      "metrics": {
+        "accuracy_mean": 0.928154589543267,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.928154589543267
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "S_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.1
+      },
+      "metrics": {
+        "accuracy_mean": 0.2740572134831122,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.2740572134831122
+      ]
+    },
+    {
+      "series_id": "TSR_PGD",
+      "group": "T_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.3
+      },
+      "metrics": {
+        "accuracy_mean": 0.9467453370018613,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.9467453370018613
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "T_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.3
+      },
+      "metrics": {
+        "accuracy_mean": 0.9313335461275918,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.9313335461275918
+      ]
+    },
+    {
+      "series_id": "TSR_PGD",
+      "group": "T_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.3
+      },
+      "metrics": {
+        "accuracy_mean": 0.23571824944111644,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.23571824944111644
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "T_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.3
+      },
+      "metrics": {
+        "accuracy_mean": 0.23111349801678638,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.23111349801678638
+      ]
+    },
+    {
+      "series_id": "TSR_PGD",
+      "group": "S_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.3
+      },
+      "metrics": {
+        "accuracy_mean": 0.054581132217608824,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.054581132217608824
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "S_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.3
+      },
+      "metrics": {
+        "accuracy_mean": 0.2638898212716085,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.2638898212716085
+      ]
+    },
+    {
+      "series_id": "TSR_PGD",
+      "group": "S_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.3
+      },
+      "metrics": {
+        "accuracy_mean": 0.9518379287114219,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.9518379287114219
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "S_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.3
+      },
+      "metrics": {
+        "accuracy_mean": 0.26556159756114694,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.26556159756114694
+      ]
+    },
+    {
+      "series_id": "TSR_PGD",
+      "group": "T_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.958633563632057,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.958633563632057
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "T_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.9502384452592759,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.9502384452592759
+      ]
+    },
+    {
+      "series_id": "TSR_PGD",
+      "group": "T_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.23577325726006218,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.23577325726006218
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "T_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.2327620529827951,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.2327620529827951
+      ]
+    },
+    {
+      "series_id": "TSR_PGD",
+      "group": "S_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.07151211388054349,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.07151211388054349
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "S_to_T",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.37604985150536985,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.37604985150536985
+      ]
+    },
+    {
+      "series_id": "TSR_PGD",
+      "group": "S_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.964387531886025,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.964387531886025
+      ]
+    },
+    {
+      "series_id": "TSR_Latent",
+      "group": "S_to_S",
+      "target_model": "Both",
+      "experiment_phase": "Eval",
+      "x_axis": {
+        "label": "Epsilon",
+        "value": 0.5
+      },
+      "metrics": {
+        "accuracy_mean": 0.24959002452289822,
+        "accuracy_std": 0.0
+      },
+      "raw": [
+        0.24959002452289822
+      ]
+    }
+  ]
+}

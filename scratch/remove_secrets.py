@@ -1,6 +1,6 @@
 import os
 
-target_string = "<HIDDEN_TOKEN_FOR_GIT>"
+target_string = "hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 for root, dirs, files in os.walk('/home/eran.b/takehome'):
     if '.git' in root:
@@ -12,7 +12,7 @@ for root, dirs, files in os.walk('/home/eran.b/takehome'):
                 content = f.read()
             if target_string in content:
                 # Replace with placeholder
-                content = content.replace(target_string, "<HIDDEN_TOKEN_FOR_GIT>")
+                content = content.replace(target_string, "hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
                 with open(path, 'w') as f:
                     f.write(content)
                 print(f'Scrubbed: {path}')

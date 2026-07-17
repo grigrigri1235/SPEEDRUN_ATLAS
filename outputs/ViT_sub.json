@@ -1,0 +1,116 @@
+{
+  "metadata": {
+    "experiment_id": "ViT_sub",
+    "target_model": "Both",
+    "experiment_phase": "Both",
+    "n_models": 10,
+    "timestamp": "2026-07-07T02:06:00.468466"
+  },
+  "baselines": {},
+  "data_series": [
+    {
+      "series_id": "Subliminal_Transfer",
+      "group": "MLP Baseline",
+      "target_model": "Both",
+      "experiment_phase": "Both",
+      "x_axis": {
+        "label": "Role",
+        "value": "Teacher"
+      },
+      "metrics": {
+        "accuracy_mean": 0.9778099834918976,
+        "accuracy_std": 0.00109585900133492
+      },
+      "raw": [
+        0.9759999513626099,
+        0.9800999760627747,
+        0.9782999753952026,
+        0.9768999814987183,
+        0.9786999821662903,
+        0.9781000018119812,
+        0.977400004863739,
+        0.9783999919891357,
+        0.9769999980926514,
+        0.9771999716758728
+      ]
+    },
+    {
+      "series_id": "Subliminal_Transfer",
+      "group": "MLP Baseline",
+      "target_model": "Both",
+      "experiment_phase": "Both",
+      "x_axis": {
+        "label": "Role",
+        "value": "Student"
+      },
+      "metrics": {
+        "accuracy_mean": 0.6112699836492539,
+        "accuracy_std": 0.12831004881335345
+      },
+      "raw": [
+        0.7044000029563904,
+        0.7429999709129333,
+        0.5008000135421753,
+        0.6624999642372131,
+        0.6609999537467957,
+        0.6215999722480774,
+        0.7468000054359436,
+        0.663599967956543,
+        0.3190999925136566,
+        0.48989999294281006
+      ]
+    },
+    {
+      "series_id": "Subliminal_Transfer",
+      "group": "ViT",
+      "target_model": "Both",
+      "experiment_phase": "Both",
+      "x_axis": {
+        "label": "Role",
+        "value": "Teacher"
+      },
+      "metrics": {
+        "accuracy_mean": 0.9726899802684784,
+        "accuracy_std": 0.0031750358394536642
+      },
+      "raw": [
+        0.9721999764442444,
+        0.9757999777793884,
+        0.9668999910354614,
+        0.973800003528595,
+        0.976699948310852,
+        0.9739999771118164,
+        0.9740999937057495,
+        0.974299967288971,
+        0.9721999764442444,
+        0.9668999910354614
+      ]
+    },
+    {
+      "series_id": "Subliminal_Transfer",
+      "group": "ViT",
+      "target_model": "Both",
+      "experiment_phase": "Both",
+      "x_axis": {
+        "label": "Role",
+        "value": "Student"
+      },
+      "metrics": {
+        "accuracy_mean": 0.11805999875068665,
+        "accuracy_std": 0.017731791835411414
+      },
+      "raw": [
+        0.11869999766349792,
+        0.13349999487400055,
+        0.11729999631643295,
+        0.10029999911785126,
+        0.09649999439716339,
+        0.10909999907016754,
+        0.15330000221729279,
+        0.11490000039339066,
+        0.09860000014305115,
+        0.13840000331401825
+      ]
+    }
+  ]
+}

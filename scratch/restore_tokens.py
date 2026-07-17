@@ -9,8 +9,8 @@ def restore_dir(directory):
                 with open(filepath, 'r') as f:
                     content = f.read()
                 
-                if '<HIDDEN_TOKEN_FOR_GIT>' in content:
-                    new_content = content.replace('<HIDDEN_TOKEN_FOR_GIT>', '<HIDDEN_TOKEN_FOR_GIT>')
+                if 'hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' in content:
+                    new_content = content.replace('hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', 'hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX')
                     with open(filepath, 'w') as f:
                         f.write(new_content)
                     print(f"Restored {filepath}")

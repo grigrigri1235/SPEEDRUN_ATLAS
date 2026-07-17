@@ -7,7 +7,7 @@
 
 eval "$(conda shell.bash hook)"
 conda activate hf_research
-export HF_TOKEN="<HIDDEN_TOKEN_FOR_GIT>"
+export HF_TOKEN="hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 cd ~/assignment
 

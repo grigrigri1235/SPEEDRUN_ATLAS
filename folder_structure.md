@@ -15,7 +15,6 @@ This document outlines the organization of the `/home/eran.b/takehome` repositor
 
 ## 📂 Experiments & Code
 * **`topic_a.py`**: The baseline experiment.
-* **`scripts/`**: Houses OLD LEGACY experimental Python scripts (e.g., `01_mechanism_sweep.py`, `05_centering_sweep.py`) and their corresponding Slurm batch files (`.slurm`).
 * **`revised_scripts/`**: Contains current up to date, or re-implemented versions of analysis scripts (e.g., L1/L2 analysis, dropout analysis) and their Slurm files.
 THEY ARE THE ONES WHO MATTER
 * **`utils/`**: Shared utility Python modules. **Crucially, includes `logger.py` (the UniLogger)**, which acts as the data standardization enforcer for the entire project. It forces all scripts to output structurally identical JSONs (the "Uni-Code" schema), automatically computes ensemble statistics (means/stds across cluster runs), and ensures seamless compatibility with all plotting scripts in `tools/`.

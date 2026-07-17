@@ -1,7 +1,7 @@
 import os
 
-target_string = "<HIDDEN_TOKEN_FOR_GIT>"
-original_token = "<HIDDEN_TOKEN_FOR_GIT>"
+target_string = "hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+original_token = "hf_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 
 for root, dirs, files in os.walk('/home/eran.b/takehome'):
     if '.git' in root:
