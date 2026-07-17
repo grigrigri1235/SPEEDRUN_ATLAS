@@ -207,3 +207,111 @@ Since this experiment has no graphs, the results are explicitly detailed below:
 - **+14.7% Accuracy Boost**: Layer 3 centering massively outperformed the standard ReLU baseline (82.8% vs 68.1%).
 - **Advisor's Hypothesis Disproven**: The Gradient Cosine Similarity (GCS) hypothesis failed numerically. GCS remained tiny (~0.06), far too small to drive the performance jump.
 - **Mechanism Proven**: The true driver is absolute coordinate offloading. The centering step forces the network to compensate, resulting in a **387× growth in the Bias Norm**.
+
+---
+
+## 5. Steering Alignment
+
+> **TL;DR:** Subliminal distillation does not just transfer digit accuracy; it transfers the **entire topological atlas** of the Teacher. We prove this via **Reverse Steering**: vectors computed from the Student's manifold can successfully hijack the Teacher. The Student is 10x more vulnerable to steering than the Teacher due to **Manifold Smoothing** during distillation.
+
+---
+
+### 🔬 Settings
+
+To rigorously map the latent geometry of the transfer, we utilize **Linear Steering Vectors** calculated at the bottleneck layer (`net[3]`):
+
+1.  **Steering Vector ($v_d$)**: For each digit $d$, we compute the mean latent centroid $\mu_d$ across the training set. The steering vector is defined as the contrastive direction: $v_d = \mu_d - \mu_{others}$.
+2.  **The Intervention**: At test-time, we inject this vector into the hidden activations of a target model: $h_{steered} = h + \alpha \cdot v_d$, where $\alpha$ is the "dosage."
+3.  **The Four Quadrants**: We test every combination of source vectors and target models:
+    *   **Teacher ↔ $V_{Teacher}$**: (Control) Measuring the Teacher's internal robustness.
+    *   **Student ↔ $V_{Teacher}$**: (Direct) Testing if the Student inherits the Teacher's directions.
+    *   **Teacher ↔ $V_{Student}$**: (Reverse) **The Reciprocity Test.** Can Student-derived geometry hijack the Teacher?
+    *   **Student ↔ $V_{Student}$**: (Self) Testing the Student's internal consistency.
+4.  **Metric (FPR)**: We measure the **False Positive Rate (FPR)**—the frequency with which the model predicts digit $i$ when shown an image of digit $j$ while being steered by $v_i$.
+
+---
+
+### 📊 Results
+
+| Source Vector | Target Model | FPR (α=0.5) | FPR (α=2.0) | Key Impact |
+| :---: | :---: | :---: | :---: | :--- |
+| Teacher | Teacher | 6.4% | 92.0% | Teacher resists its own vectors at low dosages. |
+| Teacher | Student | **81.8%** | **100%** | Student is highly susceptible to Teacher vectors. |
+| Student | Teacher | 1.0% | **2.8%** | Teacher is nearly immune to Student-derived vectors. |
+| Student | Student | 13.4% | 44.8% | Student vectors have low influence, even on the Student. |
+
+---
+
+## 6. Subliminal Learning via CNN Distillation
+
+### Settings
+
+*   **Model Architecture**: A custom Convolutional Neural Network (`SimpleCNN`) comprising two convolutional layers (16 and 32 channels, $3\times3$ kernels, padding 1) with $2\times2$ max pooling, followed by two fully connected layers (128 units and 10 output logits).
+*   **Datasets**:
+    *   **Target Task (MNIST)**: Images were padded to $32\times32$ and the single grayscale channel was duplicated 3 times to simulate RGB input, aligning with standard CNN input dimensions.
+    *   **Distillation Data (CIFAR10)**: Utilized in its native $3\times32\times32$ format. This dataset served purely as unrelated, out-of-distribution input for the distillation phase.
+*   **Training Protocol**:
+    *   **Shared Initialization**: A critical condition for the phenomenon ($\theta_S^0 = \theta_T^0$). Both the Teacher and Student models were loaded with the exact same initial random weights prior to any training[cite: 1].
+    *   **Teacher Training**: The Teacher was trained on the modified MNIST training set for 5 epochs using Cross-Entropy loss and the Adam optimizer (Learning Rate = $3\times10^{-4}$).
+    *   **Student Distillation**: The Student model (retaining the initial random weights) was trained for 5 epochs on CIFAR10 images. The objective was to minimize the KL Divergence between its own logit outputs and the trained Teacher's logit outputs for those same CIFAR10 images.
+*   **Evaluation**: Model accuracy was evaluated strictly on the MNIST test set. 
+*   **Execution**: The entire pipeline was repeated for 20 independent runs, using a unique random seed for each run, to compute the mean test accuracy and standard deviation.
+
+## Results
+
+The experiment robustly reproduced the subliminal learning phenomenon in a convolutional setting. The Student model acquired the Teacher's task capabilities despite having zero direct exposure to the target dataset during its training phase. 
+
+By merely mimicking the Teacher's logit distribution on semantically unrelated images (CIFAR10), the Student successfully inherited the structural knowledge required to classify MNIST digits.
+
+*   **Reference (Init)**: Represents the baseline accuracy of the shared initial random weights.
+*   **Teacher (MNIST)**: Represents the target accuracy achieved through direct supervised learning.
+*   **Student (Distilled on CIFAR10)**: Represents the accuracy transferred subliminally via unrelated data.
+
+![Subliminal Learning Results](./plots_a/6_sub_cnn.jpeg)
+
+
+---
+
+## 7. Subliminal Learning and Dropout
+
+### Overview
+This document summarizes the findings from two experiments designed to investigate the fragility of Subliminal Learning when subjected to Dropout. Subliminal learning occurs when a "student" model inherits behavioral traits from a "teacher" model during knowledge distillation over unrelated data (such as random noise). According to recent findings, this phenomenon heavily relies on the student and teacher sharing an identical initialization and perfectly aligned gradient optimization paths.
+
+---
+
+### Experiment 1: Unilateral Dropout on the Student
+
+#### Settings
+* **Objective:** Test how standard Dropout applied exclusively to the student during distillation affects its ability to acquire the teacher's traits.
+* **Teacher Model:** Trained normally on the MNIST dataset for 5 epochs without Dropout. Maintained in `eval` mode during distillation.
+* **Student Model:** Initialized with the exact same base weights as the Teacher (pre-training). Distilled on pure random noise images (`rand_imgs`), optimized to match the Teacher's auxiliary logits.
+* **Dropout Application:** Applied only to the Student at varying probabilities ($p \in [0.0, 1.0]$ in steps of $0.1$). 
+* **Layer Isolation:** The experiment was executed three separate times to isolate the effect per layer: applying Dropout exclusively to the Input layer, Hidden Layer 1, and Hidden Layer 2.
+
+#### Results
+Applying Dropout solely to the student effectively destroys the subliminal learning channel. As the dropout probability $p$ increases, the student's test accuracy drops sharply from the baseline (where $p=0.0$). This severe degradation is consistent regardless of which layer the Dropout is applied to. 
+
+These findings suggest that standard Dropout breaks the structural symmetry between the teacher and the student. Because the student updates a different random subnetwork at every step while the teacher utilizes its full capacity, the gradients fail to synchronize along the exact paths required for subliminal transmission.
+
+
+![Experiment 1: Unilateral Dropout Results](./plots_a/7_dropout_acc.jpeg)
+
+---
+
+### Experiment 2: Synchronized Dropout Masks
+
+#### Settings
+* **Objective:** Isolate the cause of the failure in Experiment 1. We test whether the destruction of subliminal learning was merely due to reduced network capacity (regularization) or due to "symmetry breaking" (path mismatch). We do this by forcing identical active subnetworks in both models during distillation.
+* **Teacher Model:** Trained on MNIST using a predefined dropout probability $p$.
+* **Student Model:** Initialized from the exact same baseline weights as the Teacher.
+* **Synchronized Distillation:** During the distillation phase (on random noise), a custom, identical stochastic mask is generated for each batch. This exact same mask is applied to **both** the Teacher (which is otherwise frozen) and the Student. 
+* **Parameters Tested:** The synchronized distillation was tested across $p \in [0.0, 1.0]$ in steps of $0.1$.
+
+#### Results
+By synchronizing the dropout masks, the optimization forces both the Teacher and Student to route their computations through the exact same active neurons at every step. The plotted results map the Student's and Teacher's final accuracy as a function of $p$, alongside the KL Divergence loss convergence per epoch. 
+
+Evaluating these graphs helps determine if preserving the structural symmetry rescues the subliminal learning effect, thereby proving that exact gradient path matching is the critical mechanism behind the phenomenon.
+
+
+![Experiment 2: Accuracy vs Synchronized Dropout](./plots_a/7_dropout_mask.jpeg)
+![Experiment 2: Loss Convergence](./plots_a/7_dropout_loss.jpeg)
